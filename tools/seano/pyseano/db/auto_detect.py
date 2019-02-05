@@ -1,0 +1,26 @@
+"""
+pyseano/db/auto_detect.py
+Automatically deduces the type of the database at the given path, and returns an appropriate database reader.
+"""
+
+from pyseano.constants import *
+from pyseano.db.dumb import DumbSeanoDatabase
+from pyseano.db.git import GitSeanoDatabase
+import logging
+import os
+import sys
+
+log = logging.getLogger(__name__)
+
+
+def open_seano_database(path):
+    db = GitSeanoDatabase(path)
+    if db.is_valid():
+        log.debug("Using GitSeanoDatabase")
+        return db
+    db = DumbSeanoDatabase(path)
+    if db.is_valid():
+        log.debug("Using DumbSeanoDatabase")
+        return db
+    log.error("seano db doesn't look valid.  Did you set SEANO_DB_PATH or pass --db=...?")
+    sys.exit(1)
