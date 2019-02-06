@@ -40,13 +40,13 @@ internal-short:
   - This text usually comes from developers.
 
 technical:
-  en-US: >
+  en-US: |
     Explain, in as many words as it takes, what changed.  Target audience is Ops, and your future self.
 
     Second paragraph goes here
 
 testing:
-  en-US: >
+  en-US: |
     Explain, in as many words as it takes, how to test this change.  Target audience is QA, and your future self.
 
     Second paragraph goes here
