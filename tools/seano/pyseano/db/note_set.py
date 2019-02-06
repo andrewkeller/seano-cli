@@ -12,7 +12,8 @@ log = logging.getLogger(__name__)
 
 
 class NoteSet(object):
-    def __init__(self):
+    def __init__(self, current_version):
+        self.current_version = current_version
         self.releases = {}
         self.release_order = []
 
@@ -87,11 +88,8 @@ class NoteSet(object):
         with open(path, 'r') as f:
             for d in yaml.load_all(f):
                 data.update(d)
-        releases = list_if_not_already(data.get('releases', []))
-        if not releases:
-            log.error('fatal: `release` key either missing or empty in %s', path)
-            sys.exit(1)
-        del data['releases']
+        releases = list_if_not_already(data.get('releases', [])) or [self.current_version]
+        if 'releases' in data: del data['releases']
         for r in releases:
             self.attach_note(r, data)
 

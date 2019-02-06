@@ -10,8 +10,8 @@ import subprocess
 
 
 class GitSeanoDatabase(GenericSeanoDatabase):
-    def __init__(self, path):
-        super(GitSeanoDatabase, self).__init__(path)
+    def __init__(self, path, **base_kwargs):
+        super(GitSeanoDatabase, self).__init__(path, **base_kwargs)
         try:
             cdup = subprocess.check_output(['git', 'rev-parse', '--show-cdup'], cwd=self.path,
                                            stderr=subprocess.PIPE).strip()
@@ -38,7 +38,12 @@ class GitSeanoDatabase(GenericSeanoDatabase):
         uncommitted_files = subprocess.check_output(uncommitted_files_query, cwd=self.path).splitlines()
         uncommitted_files = [os.path.join(self.path, x) for x in uncommitted_files]
         uncommitted_files = [x for x in uncommitted_files if os.path.exists(x)]
-        return h_data(refs_list, *[h_file(x) for x in uncommitted_files])
+        h_inputs = []
+        h_inputs.append(refs_list)
+        h_inputs.extend([h_file(x) for x in uncommitted_files])
+        h_inputs.append(self.current_version)
+        h_inputs.extend(self.parent_versions)
+        return h_data(*h_inputs)
 
     def make_new_note(self):
         filename = super(GitSeanoDatabase, self).make_new_note()

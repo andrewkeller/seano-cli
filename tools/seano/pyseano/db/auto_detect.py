@@ -13,12 +13,12 @@ import sys
 log = logging.getLogger(__name__)
 
 
-def open_seano_database(path):
-    db = GitSeanoDatabase(path)
+def open_seano_database(path, **db_kwargs):
+    db = GitSeanoDatabase(path, **db_kwargs)
     if db.is_valid():
         log.debug("Using GitSeanoDatabase")
         return db
-    db = DumbSeanoDatabase(path)
+    db = DumbSeanoDatabase(path, **db_kwargs)
     if db.is_valid():
         log.debug("Using DumbSeanoDatabase")
         return db
