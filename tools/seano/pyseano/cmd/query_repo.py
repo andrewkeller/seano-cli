@@ -10,12 +10,12 @@ import yaml
 log = logging.getLogger(__name__)
 
 
-def query_release_notes(db, out):
+def query_release_notes(db, out, **db_kwargs):
     if not out:
         log.error("Invalid desitnation file: (empty string)")
         sys.exit(1)
 
-    data = yaml.dump(open_seano_database(db).query())
+    data = yaml.dump(open_seano_database(db, **db_kwargs).query())
 
     if out in ['-']:
         print data

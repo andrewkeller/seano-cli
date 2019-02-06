@@ -16,9 +16,13 @@ log = logging.getLogger(__name__)
 
 
 class GenericSeanoDatabase(object):
-    def __init__(self, path):
+    def __init__(self, path,
+                 # ABK: Not using kwargs here so that we can block non-accepted args
+                 current_version=None, parent_versions=None):
         self.path = os.path.abspath(path)
         self.db_objs = os.path.join(self.path, SEANO_DB_SUBDIR)
+
+        # Load database's current configurations from disk:
         cfg = os.path.join(path, SEANO_CONFIG_FILE)
         try:
             with open(cfg, "r") as f:
@@ -30,12 +34,24 @@ class GenericSeanoDatabase(object):
                 log.warning("unusual error while trying to read %s: %s", cfg, e)
                 sys.exit(1)
 
+        # Possibly overwrite some database configurations if they were provided to this constructor:
+
+        if current_version:
+            self.current_version = current_version
+        if not getattr(self, 'current_version', None):
+            self.current_version = 'HEAD'
+
+        if parent_versions:
+            self.parent_versions = parent_versions
+        if not getattr(self, 'parent_versions', None):
+            self.parent_versions = []
+
     def is_valid(self):
         if not os.path.isfile(os.path.join(self.path, SEANO_CONFIG_FILE)): return False
         return True
 
     def incrementalHash(self):
-        return h_folder(self.path)
+        return h_data(h_folder(self.path), self.current_version, *self.parent_versions)
 
     def make_new_note_filename(self):
         return self.make_note_filename_from_uid(uuid.uuid4().hex)
@@ -79,8 +95,12 @@ class GenericSeanoDatabase(object):
         #
         # Note, though, that this implementation doesn't scale well because we don't know when to bail, because there
         # is no sense of time without a repository.  This implementation is basically a glorified demo.
-        s = NoteSet()
-        s.load_version_info(getattr(self, 'version-defs', []))
+        s = NoteSet(self.current_version)
+        s.load_version_info(getattr(self, 'version_defs', []))
+        s.load_version_info([{
+            'name' : self.current_version,
+            'after' : self.parent_versions,
+        }])
         for root, directories, filenames in os.walk(self.db_objs):
             for f in filenames:
                 if f.endswith(SEANO_TEMPLATE_EXTENSION):
