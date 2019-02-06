@@ -5,7 +5,7 @@ Interactive command-line wrapper on top of the infrastructure that queries a sea
 
 from pyseano.db import *
 from pyseano.utils import *
-import yaml
+import json
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +15,8 @@ def query_release_notes(db, out, **db_kwargs):
         log.error("Invalid desitnation file: (empty string)")
         sys.exit(1)
 
-    data = yaml.dump(open_seano_database(db, **db_kwargs).query())
+    data = open_seano_database(db, **db_kwargs).query()
+    data = json.dumps(data)
 
     if out in ['-']:
         print data
