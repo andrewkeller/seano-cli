@@ -36,7 +36,8 @@ def main():
     add_db_args(subparser)
 
     subparser = subparsers.add_parser('new', help='Create a new release note and edit it')
-    subparser.set_defaults(func=make_new_release_note)
+    subparser.set_defaults(func=make_new_release_notes)
+    subparser.add_argument('-n', action='store', dest='count', default=1, help='Number of new notes to create')
     add_db_args(subparser)
 
     subparser = subparsers.add_parser('edit', help='Identifies and edits the latest created relase note')
