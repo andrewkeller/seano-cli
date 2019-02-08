@@ -3,7 +3,7 @@ pyseano/constants.py
 Shared constants used by seano
 """
 
-SEANO_DEFAULT_EDITOR = 'vim'
+SEANO_DEFAULT_EDITOR = 'vim -o'
 
 SEANO_CONFIG_FILE = 'seano-config.yaml'
 SEANO_CONFIG_TEMPLATE = '---\n'

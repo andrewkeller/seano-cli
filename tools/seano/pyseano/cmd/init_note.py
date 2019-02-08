@@ -7,5 +7,5 @@ from pyseano.db import *
 from pyseano.utils import *
 
 
-def make_new_release_note(db):
-    edit_files([open_seano_database(db).make_new_note()])
+def make_new_release_notes(db, count):
+    edit_files(open_seano_database(db).make_new_notes(count))

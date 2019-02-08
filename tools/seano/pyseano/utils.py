@@ -33,6 +33,8 @@ def write_file(filename, contents):
 
 
 def edit_files(filenames):
+    if not filenames:
+        return
     editor = shlex.split(os.environ.get('SEANO_EDITOR', os.environ.get('EDITOR', SEANO_DEFAULT_EDITOR)))
     subprocess.call(editor + filenames)
 

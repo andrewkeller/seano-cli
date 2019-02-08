@@ -69,6 +69,14 @@ class GenericSeanoDatabase(object):
         write_file(filename, SEANO_TEMPLATE_CONTENTS)
         return filename
 
+    def make_new_notes(self, count):
+        count = int(count) # Buck stops here for garbage data
+        filenames = []
+        while len(filenames) < count:
+            filenames.append(self.make_new_note())
+        filenames.sort()
+        return filenames
+
     def rekey_note(self, from_id):
         from_filename = self.make_note_filename_from_uid(from_id)
         with open(from_filename, 'r') as f:
