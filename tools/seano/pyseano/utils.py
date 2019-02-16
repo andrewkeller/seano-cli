@@ -36,6 +36,10 @@ def edit_files(filenames):
     if not filenames:
         return
     editor = shlex.split(os.environ.get('SEANO_EDITOR', os.environ.get('EDITOR', SEANO_DEFAULT_EDITOR)))
+    if len(filenames) > 9:
+        if raw_input('Found %d notes; are you sure you want to run `%s` with all of them? [y,N]  '
+                     % (len(filenames), ' '.join(editor))).lower() not in ['y', 'ye', 'yes']:
+            return
     subprocess.call(editor + filenames)
 
 

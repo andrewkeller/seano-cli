@@ -50,14 +50,21 @@ class GitSeanoDatabase(GenericSeanoDatabase):
         subprocess.check_call(['git', 'add', '-N', filename])
         return filename
 
+    def git_diff_opts(self, include_modified):
+        return [
+                '--no-renames',
+                '--diff-filter=AM' if include_modified else '--diff-filter=A',
+                '--name-only',
+                ]
+
     def _fixup_release_notes_list(self, files):
         files = [f for f in files if f.endswith(SEANO_TEMPLATE_EXTENSION)]
         files = [os.path.join(self.repo, f) for f in files]
         return files
 
-    def list_newly_staged_release_notes(self):
+    def list_newly_staged_release_notes(self, include_modified):
         return self._fixup_release_notes_list(subprocess.check_output(
-            ['git', 'diff', '--cached', '--no-renames', '--diff-filter=A', '--name-only', '--', self.db_objs],
+            ['git', 'diff', '--cached'] + self.git_diff_opts(include_modified) + ['--', self.db_objs],
             cwd=self.repo,
         ).splitlines())
 
@@ -70,22 +77,45 @@ class GitSeanoDatabase(GenericSeanoDatabase):
     def move_note(self, from_filename, to_filename):
         subprocess.check_call(['git', 'mv', from_filename, to_filename])
 
-    def most_recently_added_notes(self):
+    def most_recently_added_notes(self, include_modified):
         def list_most_recently_committed_added_release_notes():
             # ABK: This command outputs the commit ID of the found commit, but it's conveniently pruned later due to
             #      the lack of a file extension.
             return self._fixup_release_notes_list(subprocess.check_output(
                 [
-                    'git', 'log', '--no-renames', '--diff-filter=A', '--name-only', '--pretty=format:%H', '-1', '--',
+                    'git', 'log'] + self.git_diff_opts(include_modified) + ['--pretty=format:%H', '-1', '--',
                     self.db_objs,
                  ],
                 cwd=self.repo,
             ).splitlines())
 
-        for attempt in [self.list_newly_staged_release_notes,
-                        self.list_untracked_unignored_release_notes,
-                        list_most_recently_committed_added_release_notes]:
+        for attempt in [lambda: self.list_newly_staged_release_notes(include_modified) +
+                                self.list_untracked_unignored_release_notes(),
+                        lambda: list_most_recently_committed_added_release_notes()]:
             files = attempt()
             if files:
                 return files
         return []
+
+    def get_notes_matching_pattern(self, pattern, include_modified):
+        prior_files, prior_errors = super(GitSeanoDatabase, self) \
+            .get_notes_matching_pattern(pattern=pattern, include_modified=include_modified)
+        p = subprocess.Popen(['git', 'rev-parse', pattern], cwd=self.repo,
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        if p.returncode != 0:
+            err = 'git rejected the pattern: ' + (stderr.splitlines() or ['unspecified error'])[0]
+            return (prior_files, prior_errors + [err])
+        range = stdout.splitlines()
+        if len(range) < 1:
+            err = "git did not provide a commit range for the pattern '%s'" % (pattern,)
+            return (prior_files, prior_errors + [err])
+        if len(range) > 1:
+            argv = ['git', 'diff'] + self.git_diff_opts(include_modified) + range
+        else:
+            argv = ['git', 'show'] + self.git_diff_opts(include_modified) + ['--pretty=format:%H'] + range
+        files = self._fixup_release_notes_list(subprocess.check_output(argv, cwd=self.repo).splitlines())
+        if not files:
+            err = 'No commit in the range %s added%s any notes' % (pattern, '/modified' if include_modified else '')
+            return (prior_files, prior_errors + [err])
+        return (prior_files + files, prior_errors)
