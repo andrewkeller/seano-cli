@@ -37,12 +37,25 @@ def main():
 
     subparser = subparsers.add_parser('new', help='Create a new release note and edit it')
     subparser.set_defaults(func=make_new_release_notes)
-    subparser.add_argument('-n', action='store', dest='count', default=1, help='Number of new notes to create')
     add_db_args(subparser)
+    subparser.add_argument('-n', action='store', dest='count', default=1, help='Number of new notes to create')
 
     subparser = subparsers.add_parser('edit', help='Identifies and edits the latest created relase note')
     subparser.set_defaults(func=edit_latest_release_note)
     add_db_args(subparser)
+    subparser.add_argument('--include-wip', '-w', action='store_true', default=False,
+                           help='When no patterns are provided, the default behavior is to search for notes that ' +
+                                'have not been committed in the repository yet.  When one or more patterns are ' +
+                                'provided, that behavior is disabled.  This option turns that back on.')
+    subparser.add_argument('--include-modified', '-m', action='store_true', default=False,
+                           help='Modified files (files edited within a range, but added previously), are ' +
+                                'universally ignored when selecting files to edit, whether you supplied a pattern ' +
+                                'or not.  This option modifies the file selection process to include modified files.')
+    subparser.add_argument('patterns', metavar='PATTERN', nargs='*', default=[],
+                           help='Instead of selecting works-in-progress (uncommitted notes), search for notes based ' +
+                                'on a pattern.  The pattern may be the beginning of a note ID, or it may be a ' +
+                                'commit ID or range in the underlying repository, from which we auto-detect added ' +
+                                'notes.')
 
     subparser = subparsers.add_parser('hash', help='Returns an arbitrary string that changes with all database '+
                                       'modifications; used by build systems to properly support incremental builds')

@@ -6,8 +6,10 @@ Base class for the different kinds of seano databases
 from pyseano.db.note_set import NoteSet
 from pyseano.utils import *
 import errno
+import glob
 import logging
 import os
+import re
 import sys
 import uuid
 import yaml
@@ -92,9 +94,21 @@ class GenericSeanoDatabase(object):
     def move_note(self, from_filename, to_filename):
         os.rename(from_filename, to_filename)
 
-    def most_recently_added_notes(self):
+    def most_recently_added_notes(self, include_modified):
         log.error("Database is not repository-backed; unable to intuit which release note is latest")
         sys.exit(1)
+
+    def get_notes_matching_pattern(self, pattern, include_modified):
+        # Even without a repository, we can still search the database for filenames that matches the given pattern.
+        m = re.match(r'^([0-9a-fA-F]{2})/?([0-9a-fA-F]*)$', pattern)
+        if not m:
+            return ([], ["refusing to glob '%s' on disk in the seano database" % (pattern,)])
+        pat = m.group(1) + os.sep + m.group(2) + '*' + SEANO_TEMPLATE_EXTENSION
+        log.debug('Converted pattern to glob: %s', pat)
+        files = glob.glob(os.path.join(self.db_objs, pat))
+        if not files:
+            return ([], ['No note in the database has a filename like ' + pat])
+        return (files, [])
 
     def query(self):
         # Even without a repository, we can still load everything and hope that all the information we need exists in
