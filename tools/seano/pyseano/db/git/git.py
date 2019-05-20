@@ -62,17 +62,29 @@ class GitSeanoDatabase(GenericSeanoDatabase):
         files = [os.path.join(self.repo, f) for f in files]
         return files
 
-    def list_newly_staged_release_notes(self, include_modified):
-        return self._fixup_release_notes_list(subprocess.check_output(
+    def list_just_staged_release_notes(self, include_modified):
+        result = self._fixup_release_notes_list(subprocess.check_output(
+            ['git', 'diff'] + self.git_diff_opts(include_modified) + ['--', self.db_objs],
+            cwd=self.repo,
+        ).splitlines())
+        log.debug('Staged release notes (no content): %s', result)
+        return result
+
+    def list_recently_staged_release_notes(self, include_modified):
+        result = self._fixup_release_notes_list(subprocess.check_output(
             ['git', 'diff', '--cached'] + self.git_diff_opts(include_modified) + ['--', self.db_objs],
             cwd=self.repo,
         ).splitlines())
+        log.debug('Staged release notes (some content): %s', result)
+        return result
 
     def list_untracked_unignored_release_notes(self):
-        return self._fixup_release_notes_list(subprocess.check_output(
+        result = self._fixup_release_notes_list(subprocess.check_output(
             ['git', 'ls-files', '--others', '--exclude-standard', '--', self.db_objs],
             cwd=self.repo,
         ).splitlines())
+        log.debug('Untracked unignored release notes: %s', result)
+        return result
 
     def move_note(self, from_filename, to_filename):
         subprocess.check_call(['git', 'mv', from_filename, to_filename])
@@ -81,15 +93,18 @@ class GitSeanoDatabase(GenericSeanoDatabase):
         def list_most_recently_committed_added_release_notes():
             # ABK: This command outputs the commit ID of the found commit, but it's conveniently pruned later due to
             #      the lack of a file extension.
-            return self._fixup_release_notes_list(subprocess.check_output(
+            result = self._fixup_release_notes_list(subprocess.check_output(
                 [
                     'git', 'log'] + self.git_diff_opts(include_modified) + ['--pretty=format:%H', '-1', '--',
                     self.db_objs,
                  ],
                 cwd=self.repo,
             ).splitlines())
+            log.debug('Most recently committed release notes: %s', result)
+            return result
 
-        for attempt in [lambda: self.list_newly_staged_release_notes(include_modified) +
+        for attempt in [lambda: self.list_just_staged_release_notes(include_modified) +
+                                self.list_recently_staged_release_notes(include_modified) +
                                 self.list_untracked_unignored_release_notes(),
                         lambda: list_most_recently_committed_added_release_notes()]:
             files = attempt()
