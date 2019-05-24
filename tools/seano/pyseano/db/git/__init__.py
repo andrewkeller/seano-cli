@@ -1,1 +1,1 @@
-from git import GitSeanoDatabase
+from .git import GitSeanoDatabase
