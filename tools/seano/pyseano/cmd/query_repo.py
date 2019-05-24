@@ -19,7 +19,7 @@ def query_release_notes(db, out, **db_kwargs):
     data = json.dumps(data)
 
     if out in ['-']:
-        print data
+        print(data)
         return
 
     with open(out, "w") as f:

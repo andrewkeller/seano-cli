@@ -15,7 +15,8 @@ class GitSeanoDatabase(GenericSeanoDatabase):
         try:
             cdup = subprocess.check_output(['git', 'rev-parse', '--show-cdup'], cwd=self.path,
                                            stderr=subprocess.PIPE).strip()
-            self.repo = os.path.abspath(os.path.join(self.path, cdup))
+
+            self.repo = os.path.abspath(os.path.join(self.path, cdup.decode('utf-8')))
         except subprocess.CalledProcessError:
             self.repo = None
 

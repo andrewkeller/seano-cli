@@ -7,4 +7,4 @@ from pyseano.db import *
 
 
 def hash_release_notes_db(db, **db_kwargs):
-    print open_seano_database(db, **db_kwargs).incrementalHash()
+    print(open_seano_database(db, **db_kwargs).incrementalHash())
