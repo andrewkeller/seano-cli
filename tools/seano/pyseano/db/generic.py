@@ -28,7 +28,7 @@ class GenericSeanoDatabase(object):
         cfg = os.path.join(path, SEANO_CONFIG_FILE)
         try:
             with open(cfg, "r") as f:
-                for d in yaml.load_all(f):
+                for d in yaml.load_all(f, Loader=yaml.FullLoader):
                     for k, v in d.items():
                         setattr(self, k, v)
         except IOError as e:
