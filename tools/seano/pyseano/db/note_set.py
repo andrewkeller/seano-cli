@@ -86,7 +86,7 @@ class NoteSet(object):
     def load_note(self, path, uid):
         data = {'id': uid}
         with open(path, 'r') as f:
-            for d in yaml.load_all(f):
+            for d in yaml.load_all(f, Loader=yaml.FullLoader):
                 data.update(d)
         releases = list_if_not_already(data.get('releases', [])) or [self.current_version]
         if 'releases' in data: del data['releases']
