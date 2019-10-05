@@ -26,10 +26,6 @@ def main():
                                help='The name of the current version; defaults to "HEAD"; ' +
                                     "cannot be deduced automatically because seano doesn't want to be responsible " +
                                     'for that kind of logic.')
-        subparser.add_argument('--parent-version', metavar='NAME', dest='parent_versions', action='append', default=[],
-                               help='A version that is a direct ancestor of HEAD.  May be specified more than ' +
-                                    'once if there are multiple ancestors.  Deduced automatically in supported ' +
-                                    'repositories.')
 
     subparser = subparsers.add_parser('init', help='Initialize a new release notes database')
     subparser.set_defaults(func=make_new_release_notes_db)
