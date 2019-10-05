@@ -8,6 +8,8 @@ from pyseano.db.generic import GenericSeanoDatabase
 import os
 import subprocess
 
+log = logging.getLogger(__name__)
+
 
 class GitSeanoDatabase(GenericSeanoDatabase):
     def __init__(self, path, **base_kwargs):
@@ -18,6 +20,10 @@ class GitSeanoDatabase(GenericSeanoDatabase):
 
             self.repo = os.path.abspath(os.path.join(self.path, cdup.decode('utf-8')))
         except subprocess.CalledProcessError:
+            log.info('Unable to invoke git as expected')
+            self.repo = None
+        except FileNotFoundError:
+            log.info('No database located at %s', self.path)
             self.repo = None
 
     def is_valid(self):
@@ -30,6 +36,7 @@ class GitSeanoDatabase(GenericSeanoDatabase):
         # If any files inside the database are staged, then we consider this to be a valid GitSeanoDatabase:
         if 0 != subprocess.call(['git', 'diff', '--cached', '--quiet', '--', self.path], cwd=self.repo): return True
         # This may very well be a valid Seano database of some kind, but it cannot be a GitSeanoDatabase.
+        log.info('It looks like no files exist where the database is supposed to be')
         return False
 
     def incrementalHash(self):
@@ -59,7 +66,7 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                 ]
 
     def _fixup_release_notes_list(self, files):
-        files = [f for f in files if f.endswith(SEANO_TEMPLATE_EXTENSION)]
+        files = [f for f in files if f.endswith(SEANO_NOTE_EXTENSION)]
         files = [os.path.join(self.repo, f) for f in files]
         return files
 

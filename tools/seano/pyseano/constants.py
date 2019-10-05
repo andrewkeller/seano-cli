@@ -6,11 +6,12 @@ Shared constants used by seano
 SEANO_DEFAULT_EDITOR = 'vim -O'
 
 SEANO_CONFIG_FILE = 'seano-config.yaml'
-SEANO_CONFIG_TEMPLATE = '---\n'
+SEANO_CONFIG_TEMPLATE = '''---
+'''
 
 SEANO_DB_SUBDIR = 'v1'
-SEANO_TEMPLATE_EXTENSION = '.yaml'
-SEANO_TEMPLATE_CONTENTS = '''---
+SEANO_NOTE_EXTENSION = '.yaml'
+SEANO_NOTE_DEFAULT_TEMPLATE_CONTENTS = '''---
 releases: Name or names of releases in which this change was released.  May be a string or a list of strings.
 
 risk: One of low, medium, high; risk level here does not factor in deployment tricks to minimize risk.

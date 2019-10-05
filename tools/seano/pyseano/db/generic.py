@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 class GenericSeanoDatabase(object):
     def __init__(self, path,
                  # ABK: Not using kwargs here so that we can block non-accepted args
-                 current_version=None, parent_versions=None):
+                 current_version=None):
         self.path = os.path.abspath(path)
         self.db_objs = os.path.join(self.path, SEANO_DB_SUBDIR)
 
@@ -43,13 +43,10 @@ class GenericSeanoDatabase(object):
         if not getattr(self, 'current_version', None):
             self.current_version = 'HEAD'
 
-        if parent_versions:
-            self.parent_versions = parent_versions
-        if not getattr(self, 'parent_versions', None):
-            self.parent_versions = []
-
     def is_valid(self):
-        if not os.path.isfile(os.path.join(self.path, SEANO_CONFIG_FILE)): return False
+        if not os.path.isfile(os.path.join(self.path, SEANO_CONFIG_FILE)):
+            log.info('%s does not exist.  Is this a seano database?', SEANO_CONFIG_FILE)
+            return False
         return True
 
     def incrementalHash(self):
@@ -59,16 +56,19 @@ class GenericSeanoDatabase(object):
         return self.make_note_filename_from_uid(uuid.uuid4().hex)
 
     def make_note_filename_from_uid(self, uid):
-        fs_uid = uid[:2] + os.sep + uid[2:] + SEANO_TEMPLATE_EXTENSION # be friendly to filesystems
+        fs_uid = uid[:2] + os.sep + uid[2:] + SEANO_NOTE_EXTENSION # be friendly to filesystems
         return os.path.join(self.db_objs, fs_uid)
 
     def extract_uid_from_filename(self, filename):
         # IMPROVE: This algorithm could use some santity checking to make sure it's returning a sane result
         return filename[-38:-36] + filename[-35:-5]
 
+    def get_seano_note_template_contents(self):
+        return getattr(self, 'seano_note_template_contents', SEANO_NOTE_DEFAULT_TEMPLATE_CONTENTS)
+
     def make_new_note(self):
         filename = self.make_new_note_filename()
-        write_file(filename, SEANO_TEMPLATE_CONTENTS)
+        write_file(filename, self.get_seano_note_template_contents())
         return filename
 
     def make_new_notes(self, count):
@@ -103,7 +103,7 @@ class GenericSeanoDatabase(object):
         m = re.match(r'^([0-9a-fA-F]{2})/?([0-9a-fA-F]*)$', pattern)
         if not m:
             return ([], ["refusing to glob '%s' on disk in the seano database" % (pattern,)])
-        pat = m.group(1) + os.sep + m.group(2) + '*' + SEANO_TEMPLATE_EXTENSION
+        pat = m.group(1) + os.sep + m.group(2) + '*' + SEANO_NOTE_EXTENSION
         log.debug('Converted pattern to glob: %s', pat)
         files = glob.glob(os.path.join(self.db_objs, pat))
         if not files:
@@ -115,7 +115,7 @@ class GenericSeanoDatabase(object):
         # the band files and in the global config.  This is in fact what a freshly onboarded database looks like; we
         # can't trust the repository for those old versions anyways, so all the version numbers are hard-coded.
         #
-        # Note, though, that this implementation doesn't scale well because we don't know when to bail, because there
+        # Note, though, that this implementation doesn't scale well because we are unable to bail early, because there
         # is no sense of time without a repository.  This implementation is basically a glorified demo.
         s = NoteSet(self.current_version)
         s.load_version_info(getattr(self, 'version_defs', []))
@@ -125,7 +125,7 @@ class GenericSeanoDatabase(object):
         }])
         for root, directories, filenames in os.walk(self.db_objs):
             for f in filenames:
-                if f.endswith(SEANO_TEMPLATE_EXTENSION):
+                if f.endswith(SEANO_NOTE_EXTENSION):
                     f = os.path.join(root, f)
                     s.load_note(f, self.extract_uid_from_filename(f))
         return s.dump()

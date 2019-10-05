@@ -22,5 +22,5 @@ def open_seano_database(path, **db_kwargs):
     if db.is_valid():
         log.debug("Using DumbSeanoDatabase")
         return db
-    log.error("seano db doesn't look valid.  Did you set SEANO_DB_PATH or pass --db=...?")
+    log.error("seano db doesn't look valid.  Do you need to run `seano init`?")
     sys.exit(1)
