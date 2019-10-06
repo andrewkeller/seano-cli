@@ -74,21 +74,23 @@ readability by humans, the individual band files you save in a ``seano`` databas
 When you query a ``seano`` database for its objects, ``seano`` auto-groups all notes into releases based on the commit
 graph in Git, and you get a big fat Json file containing::
 
-    [                         # sorted list of releases
-      {                        # a single release
-        "name" : "1.2.3",       # tag name
-        "after" : ["1.2.2"],    # list of immediate ancestor tags
-        "before" : ["1.2.4"],   # list of immediate descendant tags
-        "notes" : [             # sorted list of notes
-          {                      # a single note
-            "id" : "123abc",      # the id of this note in seano
-            ...                   # the contents of the note, as-is
-          },
-          ...
-        ]
-      },
-      ...
-    ]
+    {                         # top-level dictionary
+      "releases" : [           # sorted list of releases
+        {                       # a single release
+          "name" : "1.2.3",      # tag name
+          "after" : ["1.2.2"],   # list of immediate ancestor tags
+          "before" : ["1.2.4"],  # list of immediate descendant tags
+          "notes" : [            # sorted list of notes
+            {                     # a single note
+              "id" : "123abc",     # the id of this note in seano
+              ...                  # the contents of the note, as-is
+            },
+            ...
+          ]
+        },
+        ...
+      ]
+    }
 
 We do not yet have a recommended schema of data to store in ``seano``; bear with us while we figure this out.  To see
 some of the experiments in this area, take a peek at most of the ``seano``-based `documentation modules in the Mac
