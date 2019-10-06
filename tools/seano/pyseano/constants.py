@@ -7,6 +7,17 @@ SEANO_DEFAULT_EDITOR = 'vim -O'
 
 SEANO_CONFIG_FILE = 'seano-config.yaml'
 SEANO_CONFIG_TEMPLATE = '''---
+# seano does not yet support auto-deducing this from Git;
+# what is(are) the current release ancestors?
+parent_versions:
+- 0.0.0
+
+releases:
+# seano does not yet support auto-deducing 'before' and 'after' about releases from Git;
+# for each release, we must define the release, and define what came before or after.
+# Note that 'before' and 'after' may be either strings or lists of strings.
+- name:  0.0.0
+  #after: (nothing)
 '''
 
 SEANO_DB_SUBDIR = 'v1'
