@@ -74,21 +74,23 @@ readability by humans, the individual band files you save in a ``seano`` databas
 When you query a ``seano`` database for its objects, ``seano`` auto-groups all notes into releases based on the commit
 graph in Git, and you get a big fat Json file containing::
 
-    [                         # sorted list of releases
-      {                        # a single release
-        "name" : "1.2.3",       # tag name
-        "after" : ["1.2.2"],    # list of immediate ancestor tags
-        "before" : ["1.2.4"],   # list of immediate descendant tags
-        "notes" : [             # sorted list of notes
-          {                      # a single note
-            "id" : "123abc",      # the id of this note in seano
-            ...                   # the contents of the note, as-is
-          },
-          ...
-        ]
-      },
-      ...
-    ]
+    {                         # top-level dictionary
+      "releases" : [           # sorted list of releases
+        {                       # a single release
+          "name" : "1.2.3",      # tag name
+          "after" : ["1.2.2"],   # list of immediate ancestor tags
+          "before" : ["1.2.4"],  # list of immediate descendant tags
+          "notes" : [            # sorted list of notes
+            {                     # a single note
+              "id" : "123abc",     # the id of this note in seano
+              ...                  # the contents of the note, as-is
+            },
+            ...
+          ]
+        },
+        ...
+      ]
+    }
 
 We do not yet have a recommended schema of data to store in ``seano``; bear with us while we figure this out.  To see
 some of the experiments in this area, take a peek at most of the ``seano``-based `documentation modules in the Mac
@@ -276,12 +278,12 @@ can do it from within a ``wscript_build`` file:
                 return ', '.join([node.path_from(node.ctx.launch_node()) for node in self.outputs])
 
             def run(self):
-                releases = json.loads(self.inputs[0].read())  # 3
+                everything = json.loads(self.inputs[0].read())  # 3
                 with open(self.outputs[0].abspath(), 'w') as f:
                     f.write('Release Notes\n')
                     f.write('=============\n')  # 4
                     f.write('\n')
-                    for release in releases:  # 5
+                    for release in everything['releases']:  # 5
                         f.write(release.get('name', None))  # 6
                         f.write('\n--------------\n\n')
                         for note in release.get('notes', None) or []:  # 7
@@ -302,9 +304,9 @@ can do it from within a ``wscript_build`` file:
 
 1.  ``wscript_build`` files are semi-global; using a function here to create a private scope.
 2.  Defining a custom Waf task to do the work of interpreting the ``seano`` query result file.
-3.  Parse the ``seano`` query result file as Json.  The top-level structure is a list -- a list of releases.
+3.  Parse the ``seano`` query result file as Json.  The top-level structure is an object.
 4.  See the markup syntax?  We are writing this file using reStructuredText syntax so that Sphinx can consume it.
-5.  For each release in the top-level list of releases.
+5.  For each release in the list of releases.
 6.  Write out the release name as an H2.
 7.  For each note in the release.  Note that by convention, release notes are sorted by the ``seano`` note ID; this
     different views stay structurally in sync even if they have different text.  In a ``seano`` query output file, any

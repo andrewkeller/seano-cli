@@ -128,4 +128,10 @@ class GenericSeanoDatabase(object):
                 if f.endswith(SEANO_NOTE_EXTENSION):
                     f = os.path.join(root, f)
                     s.load_note(f, self.extract_uid_from_filename(f))
-        return s.dump()
+        return {
+            # IMPROVE: Would it be better to simply import everything from seano_config.py?
+            #          I mean, that's almost what this looks like...
+            'project_name' : self.project_name,
+            'current_version' : self.current_version,
+            'releases' : s.dump(),
+        }

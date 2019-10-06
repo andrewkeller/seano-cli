@@ -7,6 +7,9 @@ SEANO_DEFAULT_EDITOR = 'vim -O'
 
 SEANO_CONFIG_FILE = 'seano-config.yaml'
 SEANO_CONFIG_TEMPLATE = '''---
+project_name:
+  en-US: Acme Piano Dropper
+
 # seano does not yet support auto-deducing this from Git;
 # what is(are) the current release ancestors?
 parent_versions:
