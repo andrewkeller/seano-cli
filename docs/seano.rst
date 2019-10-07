@@ -173,7 +173,7 @@ own some keys; avoid setting them unless you intend to override them.
 
 Notes have these keys automatically set on them:
 
-* ``commits``: unused; reserved for future use
+* ``commits``: list of commit IDs that supply this note *(supported SCMs)*
 * ``id``: the ``seano`` note ID
 * ``releases``: list of release names in which this note was released *(supported SCMs)*
     * In unsupported SCMs, if you don't set this key, the note will appear in the ``HEAD`` release
@@ -187,7 +187,7 @@ Releases have these keys automatically set on them:
 * ``before``: list of names of releases that are immediate descendants of this release *(supported SCMs)*
     * In unsupported SCMs, if you do not set either ``before`` or ``after`` on a release, ``seano`` may get the release
       order incorrect
-* ``commit``: unused; reserved for future use
+* ``commit``: the commit ID of this release *(supported SCMs)*
 * ``name``: name of this release (not localized)
 * ``notes``: list of note dictionaries
 * ``refs``: unused; reserved for future use

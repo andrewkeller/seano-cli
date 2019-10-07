@@ -12,7 +12,24 @@ import shlex
 import subprocess
 import sys
 
+ascii_str_type = bytes if sys.hexversion >= 0x3000000 else str
+unicode_str_type = str if sys.hexversion >= 0x3000000 else unicode
+
 log = logging.getLogger(__name__)
+
+
+def coerce_to_ascii_str(s):
+    'Coerces the given value to a byte string.'
+    if isinstance(s, unicode_str_type):
+        return s.encode('utf-8')
+    return ascii_str_type(s)
+
+
+def coerce_to_unicode_str(s):
+    'Coerces the given value to a unicode string.'
+    if isinstance(s, ascii_str_type):
+        return s.decode('utf-8')
+    return unicode_str_type(s)
 
 
 def write_file(filename, contents):
@@ -46,7 +63,7 @@ def edit_files(filenames):
 def h_data(*data):
     m = hashlib.sha1()
     for d in data:
-        m.update(d)
+        m.update(coerce_to_ascii_str(d))
     return m.hexdigest()
 
 
@@ -56,7 +73,7 @@ def h_file(*files):
         if os.path.isdir(f):
             log.error("Assertion failed: not a file: %s", f)
             sys.exit(1)
-        m.update(str(os.path.getmtime(f)))
+        m.update(coerce_to_ascii_str(str(os.path.getmtime(f))))
     return m.hexdigest()
 
 
