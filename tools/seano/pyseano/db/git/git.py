@@ -49,8 +49,8 @@ class GitSeanoDatabase(GenericSeanoDatabase):
         h_inputs = []
         h_inputs.append(refs_list)
         h_inputs.extend([h_file(x) for x in uncommitted_files])
-        h_inputs.append(self.current_version)
-        h_inputs.extend(self.parent_versions)
+        h_inputs.append(self.config['current_version'])
+        h_inputs.extend(self.config['parent_versions'])
         return h_data(*h_inputs)
 
     def make_new_note(self):

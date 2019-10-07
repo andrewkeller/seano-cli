@@ -75,6 +75,7 @@ When you query a ``seano`` database for its objects, ``seano`` auto-groups all n
 graph in Git, and you get a big fat Json file containing::
 
     {                         # top-level dictionary
+      ...,                     # the contents of seano-config.yaml, as-is
       "releases" : [           # sorted list of releases
         {                       # a single release
           "name" : "1.2.3",      # tag name
@@ -91,6 +92,9 @@ graph in Git, and you get a big fat Json file containing::
         ...
       ]
     }
+
+The top-level dictionary is a copy of ``seano-config.yaml``; this is intended to provide shared (cross-project)
+renderers project-specific knowledge.  Examples of such knowledge include the project name, URL, etc.
 
 We do not yet have a recommended schema of data to store in ``seano``; bear with us while we figure this out.  To see
 some of the experiments in this area, take a peek at most of the ``seano``-based `documentation modules in the Mac
@@ -113,8 +117,8 @@ __ MacClientSeanoDocs_
             parent_versions:
             - 1.2.3
 
-    2. ``seano_config.yaml`` must contain a ``version_defs`` key that defines all past releases.  Refer to the
-       Onboarding section for how that looks.
+    2. ``seano_config.yaml`` must contain a ``releases`` key that defines all past releases.  Refer to the Onboarding
+       section for how that looks.
     3. The note files that are no longer applicable to ``HEAD`` must have a ``releases`` key added defining which
        release those notes were released in.  Refer to the Onboarding section for how that looks.
 
@@ -218,12 +222,12 @@ If the project has never used ``seano`` before, you must first create the ``sean
 To import old notes into an existing ``seano`` database:
 
 1. Open ``doc/seano-db/seano-config.yaml`` in your favorite text editor.
-2. In the ``version_defs`` list, make sure a release is defined with the name of the release you're importing.  The
-   list looks something like this:
+2. In the ``releases`` list, make sure a release is defined with the name of the release you're importing.  The list
+   looks something like this:
 
     .. code-block:: yaml
 
-        version_defs:
+        releases:
         - name:  1.2.3
           after: 1.2.2
         - name:  1.2.2
@@ -237,7 +241,7 @@ To import old notes into an existing ``seano`` database:
    sort order of the release notes, so that when you render old release notes using your new tools, the output has a
    chance at actually looking remarkably the same as it used to.
 4. For each note you added, explicitly set a value for the ``releases`` key.  This value is the name of the release
-   from when you defined the release in the ``version_defs`` list in ``seano-config.yaml``.  By explicitly setting a
+   from when you defined the release in the ``releases`` list in ``seano-config.yaml``.  By explicitly setting a
    release name, you are instructing ``seano`` to not try to automatically deduce the release name from the
    commit graph.
 
