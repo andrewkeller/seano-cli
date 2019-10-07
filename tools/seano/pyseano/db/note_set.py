@@ -27,13 +27,13 @@ class NoteSet(object):
             self.release_order.append(name)
         return self.releases[name]
 
-    def load_version_info(self, version_defs):
+    def load_version_info(self, releases):
         index = -1
-        for r in version_defs:
+        for r in releases:
             index = index +1
             name = r.get('name', None)
             if not name:
-                log.error("fatal: no name set on version_defs[%d]", index)
+                log.error("fatal: no name set on releases[%d]", index)
                 sys.exit(1)
 
             # update() doesn't merge lists; pull out the obvious keys and do them manually

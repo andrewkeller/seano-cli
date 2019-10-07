@@ -25,12 +25,12 @@ class GenericSeanoDatabase(object):
         self.db_objs = os.path.join(self.path, SEANO_DB_SUBDIR)
 
         # Load database's current configurations from disk:
+        self.config = dict()
         cfg = os.path.join(path, SEANO_CONFIG_FILE)
         try:
             with open(cfg, "r") as f:
                 for d in yaml.load_all(f, Loader=yaml.FullLoader):
-                    for k, v in d.items():
-                        setattr(self, k, v)
+                    self.config.update(d)
         except IOError as e:
             if e.errno != errno.ENOENT:
                 log.warning("unusual error while trying to read %s: %s", cfg, e)
@@ -39,9 +39,9 @@ class GenericSeanoDatabase(object):
         # Possibly overwrite some database configurations if they were provided to this constructor:
 
         if current_version:
-            self.current_version = current_version
-        if not getattr(self, 'current_version', None):
-            self.current_version = 'HEAD'
+            self.config['current_version'] = current_version
+        if not self.config.get('current_version', None):
+            self.config['current_version'] = 'HEAD'
 
     def is_valid(self):
         if not os.path.isfile(os.path.join(self.path, SEANO_CONFIG_FILE)):
@@ -50,7 +50,7 @@ class GenericSeanoDatabase(object):
         return True
 
     def incrementalHash(self):
-        return h_data(h_folder(self.path), self.current_version, *self.parent_versions)
+        return h_data(h_folder(self.path), self.config['current_version'], *self.config['parent_versions'])
 
     def make_new_note_filename(self):
         return self.make_note_filename_from_uid(uuid.uuid4().hex)
@@ -64,7 +64,7 @@ class GenericSeanoDatabase(object):
         return filename[-38:-36] + filename[-35:-5]
 
     def get_seano_note_template_contents(self):
-        return getattr(self, 'seano_note_template_contents', SEANO_NOTE_DEFAULT_TEMPLATE_CONTENTS)
+        return self.config.get('seano_note_template_contents', SEANO_NOTE_DEFAULT_TEMPLATE_CONTENTS)
 
     def make_new_note(self):
         filename = self.make_new_note_filename()
@@ -117,21 +117,21 @@ class GenericSeanoDatabase(object):
         #
         # Note, though, that this implementation doesn't scale well because we are unable to bail early, because there
         # is no sense of time without a repository.  This implementation is basically a glorified demo.
-        s = NoteSet(self.current_version)
-        s.load_version_info(getattr(self, 'version_defs', []))
+        s = NoteSet(self.config['current_version'])
+        s.load_version_info(self.config.get('releases', []))
         s.load_version_info([{
-            'name' : self.current_version,
-            'after' : self.parent_versions,
+            'name' : self.config['current_version'],
+            'after' : self.config['parent_versions'],
         }])
         for root, directories, filenames in os.walk(self.db_objs):
             for f in filenames:
                 if f.endswith(SEANO_NOTE_EXTENSION):
                     f = os.path.join(root, f)
                     s.load_note(f, self.extract_uid_from_filename(f))
-        return {
-            # IMPROVE: Would it be better to simply import everything from seano_config.py?
-            #          I mean, that's almost what this looks like...
-            'project_name' : self.project_name,
-            'current_version' : self.current_version,
-            'releases' : s.dump(),
-        }
+
+        # Use the main database config file (seano-config.yaml) as a foundation for the query result structure.
+        # Overwrite the entire `releases` member; the NoteSet object contains all the juicy metadata contained
+        # in the existing `releases` member in seano-config.yaml, so we're not losing any data by overwriting.
+        result = dict(self.config)
+        result['releases'] = s.dump()
+        return result
