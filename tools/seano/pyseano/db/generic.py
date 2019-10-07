@@ -21,7 +21,7 @@ class GenericSeanoDatabase(object):
     def __init__(self, path,
                  # ABK: Not using kwargs here so that we can block non-accepted args
                  current_version=None):
-        self.path = os.path.abspath(path)
+        self.path = str(os.path.abspath(path))
         self.db_objs = os.path.join(self.path, SEANO_DB_SUBDIR)
 
         # Load database's current configurations from disk:
