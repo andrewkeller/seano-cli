@@ -104,27 +104,6 @@ Client`__.
 
 __ MacClientSeanoDocs_
 
-.. warning::
-
-    ``seano`` does not yet support automatically deducing tags from Git.  It's on the todo list.  In the meantime, you
-    need to do three things to tell ``seano`` what it needs to know to organize information as intended:
-
-    1. ``seano_config.yaml`` must contain a ``parent_versions`` key that contains a list of all parent tags of
-       ``HEAD``, like this:
-
-        .. code-block:: yaml
-
-            parent_versions:
-            - 1.2.3
-
-    2. ``seano_config.yaml`` must contain a ``releases`` key that defines all past releases.  Refer to the Onboarding
-       section for how that looks.
-    3. The note files that are no longer applicable to ``HEAD`` must have a ``releases`` key added defining which
-       release those notes were released in.  Refer to the Onboarding section for how that looks.
-
-    Essentially, all ``HEAD`` notes will work as expected, but all non-``HEAD`` notes must be treated like they were
-    onboarded.
-
 Usage
 -----
 
@@ -221,26 +200,27 @@ If the project has never used ``seano`` before, you must first create the ``sean
 
 To import old notes into an existing ``seano`` database:
 
-1. Open ``doc/seano-db/seano-config.yaml`` in your favorite text editor.
-2. In the ``releases`` list, make sure a release is defined with the name of the release you're importing.  The list
-   looks something like this:
+1. If the release for which you are importing does not exist as a tag in Git (or if you are not using Git), you must
+   inform ``seano`` of the existence of the release.  To do that, open ``doc/seano-db/seano-config.yaml`` in your
+   favorite text editor, and in the ``releases`` list, make sure a release is defined with the name of the release
+   you're importing.  The list looks something like this:
 
     .. code-block:: yaml
 
         releases:
         - name:  1.2.3
-          after: 1.2.2
+          after: 1.2.2  # `after` is only needed if tags are missing
         - name:  1.2.2
           after:
           - 1.2.1   # `after` can optionally be a list
           - 1.2.0
         # ... etc
 
-3. Run ``seano new -n <N>``, where ``<N>`` is the number of release notes you're adding for this release.  By
+2. Run ``seano new -n <N>``, where ``<N>`` is the number of release notes you're adding for this release.  By
    creating ``N`` new notes all at once and editing them in ascending order of filename, you preserve the original
    sort order of the release notes, so that when you render old release notes using your new tools, the output has a
    chance at actually looking remarkably the same as it used to.
-4. For each note you added, explicitly set a value for the ``releases`` key.  This value is the name of the release
+3. For each note you added, explicitly set a value for the ``releases`` key.  This value is the name of the release
    from when you defined the release in the ``releases`` list in ``seano-config.yaml``.  By explicitly setting a
    release name, you are instructing ``seano`` to not try to automatically deduce the release name from the
    commit graph.
@@ -251,3 +231,186 @@ To import old notes into an existing ``seano`` database:
     concept at all; the power to undo mistakes is granted only by the underlying repository.  If you do not commit
     regularly, it can be difficult to undo an erroneous or mistaken ``seano new`` invocation without also
     destroying desired but uncommitted work.
+
+
+Known bugs and other sharp edges
+--------------------------------
+
+``seano edit`` does not respect overridden commit IDs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This is more of a sharp edge than a bug.
+
+So, ``seano`` lets you override the automatically deduced commit ID of a note by setting the ``commit`` attribute in
+the note to the commit of your choice.  This is useful in particular with onboarded notes, where you have N notes
+onboarded into ``seano`` all in one commit, but they represent the past X releases.  If you have a view that displays
+or uses commit IDs, it's useful to be able to tell ``seano`` the correct commit ID of an onboarded note.
+
+However, the vast majority of the functionality that powers being able to override automatically deduced properties of
+a note is implemented inside the query layer (used by ``seano query``), which is an entire layer of its own on
+top of the Git scanner.
+
+For performance, ``seano edit <commit>``, is built directly on top of the Git scanner.  It doesn't actually
+read note files from disk at all; it only returns filenames yielded by the Git scanner.  This means that if a note
+overrides its commit ID, ``seano edit <commit>`` will never know.
+
+Algorithmically, this can be fixed, but it comes with the performance penalty of being forced to load every note from
+disk, because every note has the possibility of having the commit overridden to the commit you asked for.
+
+For now, when you use ``seano edit <commit>``, understand that the ``<commit>`` parameter is referring strictly
+to Git's knowledge, and doesn't account for any overrides inside the note.  Iterate as necessary.
+
+
+Deleted releases cannot have ``before`` or ``after`` set on them
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+I choose to call this one a bug.  In a Git-backed ``seano`` database, if you want to tell ``seano`` to skip (ignore) a
+tag in Git, you can open up ``seano-config.yaml``, and add a section like this:
+
+.. code-block:: yaml
+
+    releases:
+    - name: 1.2.3
+      delete: True
+
+In a fully automatic situation, where all releases and all release ancestry is mined from Git, this works well.  When
+the Git scanner runs, it ignores 1.2.3 outright (it pretends it doesn't exist).  The automatically set before/after
+links properly hook up the releases on either side of 1.2.3, and 1.2.3 never shows up in any query.  It's like 1.2.3
+doesn't even exist.
+
+Here's the problem.  Suppose you have some manually defined releases adjacent to that deleted release.  For the sake
+of explanation, let's say that the releases you are manually defining are betas, and they don't have tags, and you
+choose to manually define the releases in ``seano-config.yaml``.  (There is an argument that betas should be tagged,
+but that doesn't help my point here)  Here is, one would think, a perfectly working set of release definitions that
+should result in a sensible outcome:
+
+.. code-block:: yaml
+
+    releases:
+    - name: 1.2.4       # this release is auto-detected via Git
+      after: 1.2.4b4    # override `after` so that it's not automatically set to 1.2.2
+
+    - name: 1.2.4b4     # manually defined but ancestry is automatic from adjacent releases
+
+    - name: 1.2.3       # this release is auto-detected via Git
+      before: 1.2.4b4   # deleted releases have no ancestry by default
+      after: 1.2.3b5    # deleted releases have no ancestry by default
+      delete: True      # for reason X, never include this release in any query
+
+    - name: 1.2.3b5     # manually defined, but ancestry is automatic from adjacent releases
+
+    - name: 1.2.2       # this release is auto-detected via Git
+      before: 1.2.3b5   # override `before` so that it's not automatically set to 1.2.4
+
+Okay, that configuration *should work*...  Algorithmically, it's fairly straight-forward to drop 1.2.3 out of the
+ancestry graph, and splice the dangling before/after links together.  But ``seano`` doesn't know how to do that right
+now, and explodes wildly when you run a query.
+
+For now, if you mark a release as deleted, you cannot override ``before`` or ``after`` on that release.  Here's what
+the above example looks like, following that advise:
+
+.. code-block:: yaml
+
+    releases:
+    - name: 1.2.4       # this release is auto-detected via Git
+      after: 1.2.4b4    # override `after` so that it's not automatically set to 1.2.2
+
+    - name: 1.2.4b4     # manually defined but ancestry is partially automatic from adjacent releases
+      after: 1.2.3b5    # manually bypass 1.2.3 and link to 1.2.3b5
+
+    - name: 1.2.3       # this release is auto-detected via Git
+      delete: True      # for reason X, never include this release in any query
+
+    - name: 1.2.3b5     # manually defined, but ancestry is automatic from adjacent releases
+
+    - name: 1.2.2       # this release is auto-detected via Git
+      before: 1.2.3b5   # override `before` so that it's not automatically set to 1.2.4
+
+
+Git scanner has trouble with conflicting reversed cherry-picks
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The Git scanner uses a simple dictionary object to track vanquished notes, but the order in which the Git scanner
+investigates parent commits is undefined.  Here's a visual example of the problem that can happen::
+
+    *   abc  Merge topic, preserving new feature
+    |\
+    | * 789  Cherry-pick commit 123
+    * | 456  Revert commit 123
+    * | 123  Develop feature
+    |/
+    *
+
+If the Git scanner chooses to investigate the left side first, it will follow these decisions:
+
+1. Commit ``456`` shows a deletion of note A.  Will mark as vanquished.
+2. Commit ``123`` shows a creation of note A.  Note A is vanquished, so it will not be reported.
+3. Commit ``789`` shows a creation of note A.  Note A is vanquished, so it will not be reported.
+
+In the above logic, step 3 is wrong.  The logic should read like this:
+
+1. Commit ``456`` shows a deletion of note A.  Will mark as vanquished.
+2. Commit ``123`` shows a creation of note A.  Note A is vanquished, so it will not be reported.
+3. Commit ``789`` shows a creation of note A.  Will report note.
+
+Presently, the commit graph described in this scenario is not expected to be common, if it ever happens at all.
+Iterate as necessary.
+
+
+Git scanner is blind to changes inside merge commits
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you create a note, modify a note, or rename a note in a merge commit, the Git scanner (used to identify the commit
+when a note was added) *will not see that change*.
+
+Algorithmically, this can be fixed, but because the current convention is that merge commits should not change the
+tree (beyond resolving merge conflicts), it's difficult to prioritize fixing this right now.
+
+
+Git scanner has trouble with note rename tracking
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In a Git-backed ``seano`` database, ``seano`` will follow exact renames of note files.  This is useful in particular,
+when you have a scenario where the database was moved at some point in history, and you want to run
+``seano edit <commit-id>`` on one of the older commits.  ``seano`` has been told the location of the database
+today, but in that old commit, it's in the old folder, so an ordinary
+``git show <commit-id> --name-only --diff-filter=AC -- <db-path>`` won't find any notes, because it's looking at the
+wrong directory.
+
+Oh, and also, renaming/moving your database shouldn't cause all of your release notes in all of history to suddenly
+look like they were created in ``HEAD``.  Yea, that too.  That's important.
+
+So how does it work?  Any time we need to read the Git history of a database, we always start at ``HEAD`` and work our
+way back through history, tracking renames as we go.  This allows us to find the correct original commit that
+introduces a specific note file, even if the database has been renamed N times throughout history.
+
+More amazingly, in the ``seano edit <commit-id>`` scenario, we use the same algorithm, but with the opposite
+goal: to find a *current note file* which was, following renames, introduced in a given commit.  Again, we start at
+``HEAD``, and trace our way back through the commit graph; because we're tracking renames per-file, when we find the
+files added in our desired commit, we also know the equivalent filename in ``HEAD``, and that's how we know which note
+to open, even though it's been renamed N times throughout history.
+
+Here's the problem.  That algorithm is *really simple*.  Like, so simple that it can be easily fooled by certain
+commit graphs::
+
+    *   789  Merge
+    |\
+    | * 456  Move entire seano database
+    * | 123  Fix spelling error in old note
+    |/
+    *
+
+In the above scenario, if the Git scanner happens to investigate the left side first, it will not detect the edited
+note in commit ``123``, because the filename in which the edit took place is not a file where the Git scanner is
+looking.  When the Git scanner gets to commit ``456``, it will see the rename and begin looking in the new location,
+but it's too late.  The consequence here is that ``seano edit -m 123`` may not work as intended.
+
+A word of advice: if you choose to rename/move a ``seano`` database (or even a single note file), do so such that:
+
+1. All rename operations are 100% exact renames (no modifications)
+2. If you make modifications to note files, do so in a different commit so that all renames are exact renames
+3. Avoid merging any branch which edits the ``seano`` database, forked from a commit before the rename, into any commit
+   after the rename.  (i.e., avoid editing the database in parallel with the rename)
+
+If you follow that advise, you should successfully avoid getting bit by shortcomings in ``seano``'s note rename
+detection logic.

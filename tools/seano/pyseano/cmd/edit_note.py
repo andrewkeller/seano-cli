@@ -12,6 +12,11 @@ log = logging.getLogger(__name__)
 def edit_latest_release_note(db, include_wip, include_modified, patterns):
     db = open_seano_database(db)
     files = []
+    # IMPROVE: In a Git-backed project, `most_recently_added_notes()` and `get_notes_matching_pattern()` are both
+    #          implemented using the Git scanner.  And, the use of `get_notes_matching_pattern()` is inside a for
+    #          loop.  There's some room for improvement here with regard to performance; although the Git scanner
+    #          is designed to be as fast as possible, it is also not terribly cheap; it would be nice to invoke it
+    #          less often.
     if include_wip or not patterns:
         files.extend(db.most_recently_added_notes(include_modified=include_modified))
         log.debug("Most recent files are:\n    %s", "\n    ".join(files))
@@ -26,6 +31,6 @@ def edit_latest_release_note(db, include_wip, include_modified, patterns):
     if not files:
         log.warning("Release notes database is empty")
         sys.exit(1)
-    files.sort()
+    files = sorted(list(set(files)))
     log.debug("About to edit:\n    %s", "\n    ".join(files))
     edit_files(files)

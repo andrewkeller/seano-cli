@@ -18,6 +18,17 @@ unicode_str_type = str if sys.hexversion >= 0x3000000 else unicode
 log = logging.getLogger(__name__)
 
 
+def coerce_to_str(s):
+    'Coerces the given value to whatever the `str` type is on this Python.'
+    if sys.hexversion >= 0x3000000:
+        if isinstance(s, bytes):
+            return s.decode('utf-8')
+    else:
+        if isinstance(s, unicode):
+            return s.encode('utf-8')
+    return s
+
+
 def coerce_to_ascii_str(s):
     'Coerces the given value to a byte string.'
     if isinstance(s, unicode_str_type):
@@ -86,6 +97,8 @@ def h_folder(*folders):
 
 
 def list_if_not_already(item):
+    if isinstance(item, set):
+        return list(item)
     if isinstance(item, list):
         return item
     return [item]
