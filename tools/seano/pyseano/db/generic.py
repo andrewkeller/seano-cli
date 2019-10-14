@@ -111,23 +111,20 @@ class GenericSeanoDatabase(object):
         return (files, [])
 
     def query(self):
+        # ABK: The beginning and end of this function should be kept somewhat in sync with the copy in git.py
+
         # Even without a repository, we can still load everything and hope that all the information we need exists in
         # the band files and in the global config.  This is in fact what a freshly onboarded database looks like; we
         # can't trust the repository for those old versions anyways, so all the version numbers are hard-coded.
         #
         # Note, though, that this implementation doesn't scale well because we are unable to bail early, because there
         # is no sense of time without a repository.  This implementation is basically a glorified demo.
-        s = NoteSet(self.config['current_version'])
-        s.load_version_info(self.config.get('releases', []))
-        s.load_version_info([{
-            'name' : self.config['current_version'],
-            'after' : self.config['parent_versions'],
-        }])
+        s = NoteSet(self.config)
         for root, directories, filenames in os.walk(self.db_objs):
             for f in filenames:
                 if f.endswith(SEANO_NOTE_EXTENSION):
                     f = os.path.join(root, f)
-                    s.load_note(f, self.extract_uid_from_filename(f))
+                    s.import_automatic_note(path=f, uid=self.extract_uid_from_filename(f))
 
         # Use the main database config file (seano-config.yaml) as a foundation for the query result structure.
         # Overwrite the entire `releases` member; the NoteSet object contains all the juicy metadata contained
