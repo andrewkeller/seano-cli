@@ -16,7 +16,7 @@ def query_release_notes(db, out, **db_kwargs):
         sys.exit(1)
 
     data = open_seano_database(db, **db_kwargs).query()
-    data = json.dumps(data)
+    data = json.dumps(data, sort_keys=True)
 
     if out in ['-']:
         print(data)
