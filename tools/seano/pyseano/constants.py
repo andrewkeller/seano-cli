@@ -14,7 +14,7 @@ SEANO_CONFIG_TEMPLATE = '''---
 # This file is used both as a configuration for seano, and as a foundation for
 # the big fat Json file you get after running a seano query.  Any keys you set
 # here will show up in the root object of a query result, and may be consumed
-# by any renderers you're using to make presentable release notes.
+# by any views you're using to make presentable release notes.
 
 # Localized name of project:
 project_name:
@@ -126,41 +126,47 @@ releases:
 SEANO_DB_SUBDIR = 'v1'
 SEANO_NOTE_EXTENSION = '.yaml'
 SEANO_NOTE_DEFAULT_TEMPLATE_CONTENTS = '''---
-risk: One of low, medium, high; risk level here does not factor in deployment tricks to minimize risk.
-
 tickets:
 - URL to JIRA/Redmine ticket
 
-min-supported-os: "version number"  # Supported OS fields are sticky; use only when this change changes them.
-max-supported-os: "version number"  # Values should be in quotes to force them to be strings.
-
-milestones-short:
+customer-short-loc-hlist-rst:
   en-US:
-  - Short description of a big milestone to be pointed out prominently in internal notes archives
+  - Short sentence explaining this change to CE customers
+  - "This is an hlist, which means:":
+    - you can express a hierarchy here
+  - This text usually comes from the ``#workroom-releasenotes`` channel in Slack
 
-downgrade-break-short: Short reason you created a Downgrade Compatibility Break, in past tense
-
-public-short:
+employee-short-loc-hlist-rst:
   en-US:
-  - Explain, in short bullets, what changed.
-  - Target audience is our public customers.
-  - This text usually comes from Marketing.
+  - Short sentence explaining this change to CE employees
+  - "This is an hlist, which means:":
+    - you can express a hierarchy here
+  - This text usually comes from the developer who made the change
+  - "For consistency, use imperative tense, without a full stop, such as:":
+    - Cook the bacon
+    - Don't crash when bacon is not loaded
+    - You usually only need one line; these are just examples
 
-internal-short:
-  en-US:
-  - Explain, in short bullets, what changed.
-  - Target audience is CE Employees.
-  - This text usually comes from developers.
-
-technical:
+employee-technical-loc-rst:
   en-US: |
-    Explain, in as many words as it takes, what changed.  Target audience is Ops, and your future self.
+    Explain:
 
-    Second paragraph goes here
+    * what changed
+    * what might go wrong (risks)
+    * how to resolve forseen problems
+    * what this change means for the future of this project
 
-testing:
+    Target audience is Ops, and future developers, including your future self.
+
+    This field is a single large reStructuredText blob.  Go wild.  Explaining details is good.
+
+employee-testing-loc-rst:
   en-US: |
-    Explain, in as many words as it takes, how to test this change.  Target audience is QA, and your future self.
+    Explain what needs to be tested (new things to test) and/or re-tested (impact requiring regression testing).
+    Target audience is QA.
 
-    Second paragraph goes here
+    In addition to informing QA of what to test/re-test, this field also is used by QA as a "diff" to be applied
+    to their official test plans.
+
+    This field is a single large reStructuredText blob.  Go wild.  Explaining details is good.
 '''

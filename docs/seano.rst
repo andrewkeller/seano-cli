@@ -94,15 +94,11 @@ graph in Git, and you get a big fat Json file containing::
     }
 
 The top-level dictionary is a copy of ``seano-config.yaml``; this is intended to provide shared (cross-project)
-renderers project-specific knowledge.  Examples of such knowledge include the project name, URL, etc.
+views project-specific knowledge.  Examples of such knowledge include the project name, URL, etc.
 
-We do not yet have a recommended schema of data to store in ``seano``; bear with us while we figure this out.  To see
-some of the experiments in this area, take a peek at most of the ``seano``-based `documentation modules in the Mac
-Client`__.
+The schema of data you store in ``seano`` is demanded/enforced by the views you choose to use, not by ``seano`` itself.
+For documentation on what schema you need to use, refer to the documentation for the :doc:`seanoViews`.
 
-.. _MacClientSeanoDocs: https://github.com/redacted/redacted/tree/master/mac/doc
-
-__ MacClientSeanoDocs_
 
 Usage
 -----
@@ -151,6 +147,12 @@ Reserved keys
 
 Generally speaking, ``seano`` only stores objects, and you put whatever data you want into it.  However, ``seano`` does
 own some keys; avoid setting them unless you intend to override them.
+
+.. note::
+
+    This documentation describes only the keys specific to ``seano``; either ``seano`` itself uses these keys, or
+    ``seano`` guarantees to all views that these keys will exist.  Some of the :doc:`seanoViews` reserve additional keys
+    for their own uses; such additional keys are not mentioned here.
 
 Notes have these keys automatically set on them:
 
@@ -246,6 +248,13 @@ To import old notes into an existing ``seano`` database:
     concept at all; the power to undo mistakes is granted only by the underlying repository.  If you do not commit
     regularly, it can be difficult to undo an erroneous or mistaken ``seano new`` invocation without also
     destroying desired but uncommitted work.
+
+
+Displaying data
+---------------
+
+``seano`` is not designed to display any data on its own.  ``seano`` is an object storage/query system; nothing more.
+To display data, take a peek at the :doc:`seanoViews`.
 
 
 Known bugs and other sharp edges
