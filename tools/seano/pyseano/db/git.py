@@ -118,15 +118,17 @@ class GitSeanoDatabase(GenericSeanoDatabase):
             notes = thing.get('notes', None)
             if notes:
                 # filter the paths by the commit that created/modified the note.  Note that notes can override the
-                # commit, but that the Git scanner doesn't read notes, so it doesn't have access to that information.
-                matches = [path for path, info in notes.items() if info['commit'] in commits_remaining]
+                # list of commits, but that the Git scanner doesn't read notes, so it doesn't have access to that
+                # information.  Also note that uncommitted notes have a list of commits of [None], so don't explode
+                # if we see that.
+                matches = [path for path, info in notes.items() if any([x in commits_remaining for x in info['commits']])]
                 if matches:
                     log.debug('Notes from commits: %s', matches)
                     files.extend([os.path.join(self.repo, x) for x in matches])
                     # On our checklist of commits togo, check off the commit of the first note (because without
                     # reading note files and potentially overriding an automatically deduced commit ID, all of the
                     # notes in the same hunk will have the same automatically deduced commit ID)
-                    commits_remaining.remove(notes[matches[0]]['commit'])
+                    commits_remaining.remove(notes[matches[0]]['commits'][0])
                 # If our checklist is empty, stop scanning.
                 if not commits_remaining: break;
         if not files:
