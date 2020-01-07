@@ -175,9 +175,16 @@ Releases have these keys automatically set on them:
 
 The following keys are functional in ``seano-config.yaml``:
 
+.. note::
+
+    Zarf automatically supplies some keys via the config annex, allowing humans to never need to supply them manually.
+    Such keys should be noted below.
+
+    For more information on the ``seano`` config annex concept, search the code base for ``--config-annex``
+
 * ``current_version``: the current version of the project
     * Always required (``seano`` does not want to be responsible for deriving this)
-    * Can be set here, or with ``--current-version`` when invoking ``seano``
+    * In Zarf projects, this is automatically supplied via the config annex
 * ``parent_versions``: list of names of releases that are immediate ancestors of HEAD *(supported SCMs)*
     * In unsupported SCMs, you must set this
 * ``releases``: list of release dictionaries

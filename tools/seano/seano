@@ -24,10 +24,9 @@ def main():
         subparser.add_argument('--db', action='store', default=os.environ.get('SEANO_DB_PATH', ''),
                                help='The path to the database; overrides the SEANO_DB_PATH environment variable if set')
         if not needsExtendedInfo: return
-        subparser.add_argument('--current-version', metavar='NAME', action='store', default='',
-                               help='The name of the current version; defaults to "HEAD"; ' +
-                                    "cannot be deduced automatically because seano doesn't want to be responsible " +
-                                    'for that kind of logic.')
+        subparser.add_argument('--config-annex', action='store', metavar='PATH', dest='config_annex_path',
+                               help='After loading the main config file located inside the seano database, also load ' +
+                                    'the file located at this path and import all of the values')
 
     subparser = subparsers.add_parser('init', help='Initialize a new release notes database')
     subparser.set_defaults(func=make_new_release_notes_db)

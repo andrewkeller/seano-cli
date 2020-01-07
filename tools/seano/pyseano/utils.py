@@ -32,13 +32,19 @@ def coerce_to_str(s):
 
 def coerce_to_ascii_str(s):
     'Coerces the given value to a byte string.'
+    if isinstance(s, ascii_str_type):
+        return s
     if isinstance(s, unicode_str_type):
         return s.encode('utf-8')
-    return ascii_str_type(s)
+    # The bytes class in Python 3 is less flexible/powerful than the str class in Python 2, and explodes more easily.
+    # As a workaround, use the str class to serialize untrusted types, and then convert to ASCII when on Python 3.
+    return coerce_to_ascii_str(str(s))
 
 
 def coerce_to_unicode_str(s):
     'Coerces the given value to a unicode string.'
+    if isinstance(s, unicode_str_type):
+        return s
     if isinstance(s, ascii_str_type):
         return s.decode('utf-8')
     return unicode_str_type(s)
