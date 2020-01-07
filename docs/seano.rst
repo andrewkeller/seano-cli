@@ -189,6 +189,10 @@ The following keys are functional in ``seano-config.yaml``:
     * In unsupported SCMs, you must set this
 * ``releases``: list of release dictionaries
     * In unsupported SCMs, this is where you manually set keys on releases
+* ``seano_note_template_contents``: big fat string value to use as the template when creating a new note
+    * When not set, a default value is used that contains all keys used by the :doc:`seanoViews`
+* ``seano_note_template_replacements``: dictionary of search-and-replace pairs to run on the note template before a human sees it for editing
+    * The intended purpose is to let projects augment the template without fully replacing the whole thing
 
 Feel free to save any other key in ``seano``.
 

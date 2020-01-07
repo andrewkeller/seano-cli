@@ -67,7 +67,18 @@ class GenericSeanoDatabase(object):
         return filename[-38:-36] + filename[-35:-5]
 
     def get_seano_note_template_contents(self):
-        return self.config.get('seano_note_template_contents', SEANO_NOTE_DEFAULT_TEMPLATE_CONTENTS)
+        # The entire note template file may be overwritten on a per-database basis:
+        result = self.config.get('seano_note_template_contents', SEANO_NOTE_DEFAULT_TEMPLATE_CONTENTS)
+
+        # Regardless of how we obtained the initial copy of the template, perform configured replacements:
+        for txt_find, txt_replace in (self.config.get('seano_note_template_replacements', None) or {}).items():
+            modified = result.replace(txt_find, txt_replace)
+            if modified == result:
+                log.warning('Warning: Unable to apply note template delta: pattern not found: "%s"', (txt_find,))
+            result = modified
+
+        # And we're done.  This is the official note template.
+        return result
 
     def make_new_note(self):
         filename = self.make_new_note_filename()

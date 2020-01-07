@@ -64,6 +64,10 @@ def main():
     add_db_args(subparser, True)
     subparser.add_argument('--out', action='store', required=True, help='Output file; use a single hyphen for stdout')
 
+    subparser = subparsers.add_parser('print-note-template', help='Print the default note template to stdout')
+    add_db_args(subparser)
+    subparser.set_defaults(func=print_note_template)
+
     subparser = subparsers.add_parser('rekey', help='Move an existing note a new ID')
     subparser.set_defaults(func=rekey_release_note)
     add_db_args(subparser)
