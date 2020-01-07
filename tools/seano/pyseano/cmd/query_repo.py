@@ -1,5 +1,6 @@
 """
 pyseano/cmd/query_repo.py
+
 Interactive command-line wrapper on top of the infrastructure that queries a seano database for release notes.
 """
 

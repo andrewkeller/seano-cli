@@ -1,5 +1,6 @@
 """
 pyseano/db/generic.py
+
 Base class for the different kinds of seano databases
 """
 

@@ -1,5 +1,6 @@
 """
 pyseano/constants.py
+
 Shared constants used by seano
 """
 

@@ -1,5 +1,6 @@
 """
 pyseano/cmd/edit_note.py
+
 Interactive command-line wrapper on top of the infrastructure that edits the latest added release note.
 """
 

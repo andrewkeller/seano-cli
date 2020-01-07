@@ -1,5 +1,6 @@
 """
 pyseano/utils.py
+
 Generic seano util functions
 """
 

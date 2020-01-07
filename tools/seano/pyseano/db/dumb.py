@@ -1,5 +1,6 @@
 """
 pyseano/db/dumb.py
+
 Reads a dumb seano database (one without a repository).
 """
 

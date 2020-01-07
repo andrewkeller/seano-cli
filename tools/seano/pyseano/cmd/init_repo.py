@@ -1,5 +1,6 @@
 """
 pyseano/cmd/init_repo.py
+
 Interactive command-line implementation of initializing a new seano database.
 """
 
