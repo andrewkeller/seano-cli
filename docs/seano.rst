@@ -114,6 +114,7 @@ we'll cover how ``seano`` is used in the typical case: as part of a Zarf project
 ``seano`` launches a text editor in most cases.  The default editor is ``vim -O`` (``vim`` in column mode).  To
 customize the editor, define either the ``SEANO_EDITOR`` or ``EDITOR`` environment variables.
 
+
 Inserting data
 --------------
 
@@ -143,6 +144,7 @@ Say, 4 commits ago, in commit ``5c6ff85ffc76022e8c525f23e7cff1726bb3aaee``, you 
 To edit all notes created between ``v1.2.4`` and ``v1.2.5``::
 
     $ seano edit v1.2.4..v1.2.5
+
 
 Reserved keys
 -------------
@@ -183,6 +185,7 @@ The following keys are functional in ``seano-config.yaml``:
 
 Feel free to save any other key in ``seano``.
 
+
 Querying data
 -------------
 
@@ -190,6 +193,7 @@ Getting data out of a ``seano`` database is done using ``seano query``.  We hope
 automated/integrated with Zarf/Sphinx in the future.  In the meantime, feel free to browse the runtime documentation::
 
     $ seano query -h
+
 
 Onboarding old data
 -------------------

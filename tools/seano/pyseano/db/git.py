@@ -1,5 +1,6 @@
 """
 pyseano/db/git/git.py
+
 Reads a git-backed seano database.
 """
 

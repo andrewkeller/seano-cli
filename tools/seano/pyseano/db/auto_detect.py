@@ -1,5 +1,6 @@
 """
 pyseano/db/auto_detect.py
+
 Automatically deduces the type of the database at the given path, and returns an appropriate database reader.
 """
 

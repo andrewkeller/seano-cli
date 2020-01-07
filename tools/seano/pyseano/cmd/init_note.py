@@ -1,5 +1,6 @@
 """
 pyseano/cmd/init_note.py
+
 Interactive command-line wrapper on top of the infrastructure that creates a new release note.
 """
 

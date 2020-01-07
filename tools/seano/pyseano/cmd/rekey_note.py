@@ -1,5 +1,6 @@
 """
 pyseano/cmd/rekey_note.py
+
 Interactive command-line wrapper on top of the infrastructure that re-keys a release note
 """
 

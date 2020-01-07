@@ -1,5 +1,6 @@
 """
 pyseano/db/note_set.py
+
 Organizes a set of release notes, does some sanity checking, and serializes as Json
 """
 
