@@ -21,26 +21,28 @@ log = logging.getLogger(__name__)
 class GenericSeanoDatabase(object):
     def __init__(self, path,
                  # ABK: Not using kwargs here so that we can block non-accepted args
-                 current_version=None):
+                 config_annex_path=None):
         self.path = str(os.path.abspath(path))
         self.db_objs = os.path.join(self.path, SEANO_DB_SUBDIR)
 
-        # Load database's current configurations from disk:
+        # Load all configurations from disk, beginning with the database's configuration:
         self.config = dict()
-        cfg = os.path.join(path, SEANO_CONFIG_FILE)
-        try:
-            with open(cfg, "r") as f:
-                for d in yaml.load_all(f, Loader=yaml.FullLoader):
-                    self.config.update(d)
-        except IOError as e:
-            if e.errno != errno.ENOENT:
-                log.warning("unusual error while trying to read %s: %s", cfg, e)
-                sys.exit(1)
+        def load_file(cfg, is_required):
+            try:
+                with open(cfg, "r") as f:
+                    for d in yaml.load_all(f, Loader=yaml.FullLoader):
+                        self.config.update(d)
+            except IOError as e:
+                if is_required or e.errno != errno.ENOENT:
+                    log.warning("unusual error while trying to read %s: %s", cfg, e)
+                    sys.exit(1)
+
+        load_file(os.path.join(path, SEANO_CONFIG_FILE), True)
+        if config_annex_path:
+            load_file(config_annex_path, False)
 
         # Possibly overwrite some database configurations if they were provided to this constructor:
 
-        if current_version:
-            self.config['current_version'] = current_version
         if not self.config.get('current_version', None):
             self.config['current_version'] = 'HEAD'
 
@@ -51,7 +53,7 @@ class GenericSeanoDatabase(object):
         return True
 
     def incrementalHash(self):
-        return h_data(h_folder(self.path), self.config['current_version'], *self.config['parent_versions'])
+        return h_data(h_folder(self.path), str(self.config))
 
     def make_new_note_filename(self):
         return self.make_note_filename_from_uid(uuid.uuid4().hex)
