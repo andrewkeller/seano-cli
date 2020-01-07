@@ -94,15 +94,11 @@ graph in Git, and you get a big fat Json file containing::
     }
 
 The top-level dictionary is a copy of ``seano-config.yaml``; this is intended to provide shared (cross-project)
-renderers project-specific knowledge.  Examples of such knowledge include the project name, URL, etc.
+views project-specific knowledge.  Examples of such knowledge include the project name, URL, etc.
 
-We do not yet have a recommended schema of data to store in ``seano``; bear with us while we figure this out.  To see
-some of the experiments in this area, take a peek at most of the ``seano``-based `documentation modules in the Mac
-Client`__.
+The schema of data you store in ``seano`` is demanded/enforced by the views you choose to use, not by ``seano`` itself.
+For documentation on what schema you need to use, refer to the documentation for the :doc:`seanoViews`.
 
-.. _MacClientSeanoDocs: https://github.com/redacted/redacted/tree/master/mac/doc
-
-__ MacClientSeanoDocs_
 
 Usage
 -----
@@ -151,6 +147,12 @@ Reserved keys
 
 Generally speaking, ``seano`` only stores objects, and you put whatever data you want into it.  However, ``seano`` does
 own some keys; avoid setting them unless you intend to override them.
+
+.. note::
+
+    This documentation describes only the keys specific to ``seano``; either ``seano`` itself uses these keys, or
+    ``seano`` guarantees to all views that these keys will exist.  Some of the :doc:`seanoViews` reserve additional keys
+    for their own uses; such additional keys are not mentioned here.
 
 Notes have these keys automatically set on them:
 
@@ -248,84 +250,11 @@ To import old notes into an existing ``seano`` database:
     destroying desired but uncommitted work.
 
 
-Advanced data processing
-------------------------
+Displaying data
+---------------
 
-Say you have note files stored in ``seano`` that have this structure:
-
-.. code-block:: yaml
-
-    ---
-    flat-release-note:
-      en-US: This is a release note!
-
-Next, say you want to use Sphinx to render and publish your release notes that are stored in ``seano``.  Here's how you
-can do it from within a ``wscript_build`` file:
-
-.. code-block:: python
-
-    def f():  # 1
-        from waflib import Task
-        import json
-
-        class rnotes_sphinx_render_task(Task.Task):  # 2
-
-            def keyword(self):
-                return 'Rendering Release Notes source file for Sphinx'
-
-            def __str__(self):
-                return ', '.join([node.path_from(node.ctx.launch_node()) for node in self.outputs])
-
-            def run(self):
-                everything = json.loads(self.inputs[0].read())  # 3
-                with open(self.outputs[0].abspath(), 'w') as f:
-                    f.write('Release Notes\n')
-                    f.write('=============\n')  # 4
-                    f.write('\n')
-                    for release in everything['releases']:  # 5
-                        f.write(release.get('name', None))  # 6
-                        f.write('\n--------------\n\n')
-                        for note in release.get('notes', None) or []:  # 7
-                            txt = note.get('flat-release-note', None) or {}  # 8
-                            txt = txt.get('en-US', None)  # 9
-                            if txt:
-                                f.write('* ')
-                                f.write(txt)  # 10
-                                f.write('\n')
-                        f.write('\n')
-                return 0
-
-        t = rnotes_sphinx_render_task(env=bld.env)  # 11
-        t.set_inputs(bld.get_compiled_seano_db_node())  # 12
-        t.set_outputs(bld.path.find_or_declare('release-notes.rst'))  # 13
-        bld.add_to_group(t)  # 14
-    f()
-
-1.  ``wscript_build`` files are semi-global; using a function here to create a private scope.
-2.  Defining a custom Waf task to do the work of interpreting the ``seano`` query result file.
-3.  Parse the ``seano`` query result file as Json.  The top-level structure is an object.
-4.  See the markup syntax?  We are writing this file using reStructuredText syntax so that Sphinx can consume it.
-5.  For each release in the list of releases.
-6.  Write out the release name as an H2.
-7.  For each note in the release.  Note that by convention, release notes are sorted by the ``seano`` note ID; this
-    different views stay structurally in sync even if they have different text.  In a ``seano`` query output file, any
-    list of notes is already sorted in order of the ``seano`` note ID.
-8.  Pull the ``flat-release-note`` key out of the current note.
-9.  Pull the ``en-US`` localization out of the dictionary.  Even before you officially begin localizing, it's a good
-    idea to structure your change notes with localization in mind.
-10. Write out the release note for this change as a list item.  Assume, if any markup, it's reStructuredText; this
-    lets us dump the text directly into our output file, and Sphinx will do the markup processing for us!
-11. Initialize a new instance of our custom Waf task.
-12. Set the input of the task to the Json file outputted by ``seano query``; we don't have to set up the file
-    or run the query ourselves here, because that's what what ``bld.get_compiled_seano_db_node()`` is doing for us.
-    ``bld.get_compiled_seano_db_node()`` caches its return value, so we can have N tasks that consume a ``seano`` query
-    result file, but yet there will only be one query task for the entire project build.
-13. Set the output of the task to ``release-notes.rst``; separately, Sphinx must be taught to include this file.
-14. Schedule the newly created task for running during the build phase.
-
-Performing this kind of work outside of Zarf is largely the same; the only difference is that there's no library that
-provides the equivalent of ``bld.get_compiled_seano_db_node()``; you must invoke ``seano query`` yourself to
-obtain a ``seano`` query output file.
+``seano`` is not designed to display any data on its own.  ``seano`` is an object storage/query system; nothing more.
+To display data, take a peek at the :doc:`seanoViews`.
 
 
 Known bugs and other sharp edges
