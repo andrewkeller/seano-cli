@@ -160,6 +160,26 @@ employee-technical-loc-rst:
 
     This field is a single large reStructuredText blob.  Go wild.  Explaining details is good.
 
+cs-technical-loc-rst:
+  en-US: |
+    Explain in short paragraphs what Customer Service should know about this change.
+
+    This text should be readable by any CSR.
+
+    For any problem this change may cause, explain how a CSR should resolve it for the customer.
+
+    If the value of ``employee-short-loc-hlist-rst`` is appropriate as-is for this section, then you may delete
+    this entire section outright and the relevant views will pull ``employee-short-loc-hlist-rst`` as the text
+    for this section.
+
+    If this change is not worth mentioning to Customer Service at all, then delete the body of this section,
+    but keep the section label; doing so will cause the relevant views to *not* auto-fall-back to the text in
+    ``employee-short-loc-hlist-rst``.
+
+    This field is a single large reStructuredText blob.  If you must explain details, then do it.  Don't be
+    afraid to write small, dense text here; the people reading this read a lot of documentation on a lot of
+    products, and excluding irrelevant information will make them happy.
+
 employee-testing-loc-rst:
   en-US: |
     Explain what needs to be tested (new things to test) and/or re-tested (impact requiring regression testing).
