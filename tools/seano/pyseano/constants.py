@@ -149,44 +149,52 @@ employee-short-loc-hlist-rst:
 
 employee-technical-loc-rst:
   en-US: |
-    Explain:
+    You are talking to your future self and Ops.
 
-    * what changed
-    * what might go wrong (risks)
-    * how to resolve forseen problems
-    * what this change means for the future of this project
+    What changed?
 
-    Target audience is Ops, and future developers, including your future self.
+    What might go wrong?
 
-    This field is a single large reStructuredText blob.  Go wild.  Explaining details is good.
+    What can Ops do to resolve an outage over the weekend?
+
+    This field is a single large reStructuredText blob.  Go wild.  Explaining
+    details is good.
 
 cs-technical-loc-rst:
   en-US: |
-    Explain in short paragraphs what Customer Service should know about this change.
+    You are talking to a Tier-2 Customer Service Representative.
 
-    This text should be readable by any CSR.
+    What changed?
 
-    For any problem this change may cause, explain how a CSR should resolve it for the customer.
+    How does this change interact with the environment?
 
-    If the value of ``employee-short-loc-hlist-rst`` is appropriate as-is for this section, then you may delete
-    this entire section outright and the relevant views will pull ``employee-short-loc-hlist-rst`` as the text
-    for this section.
+    How does this change interact with the user?
 
-    If this change is not worth mentioning to Customer Service at all, then delete the body of this section,
-    but keep the section label; doing so will cause the relevant views to *not* auto-fall-back to the text in
+    Assume something *is going wrong*.  What caused it?  How can a Customer
+    Service Representative resolve it over the weekend?
+
+    This field is a single large reStructuredText blob.  Explaining details is
+    good, but tend toward environmental and human information over API
+    architecture explanations.
+
+    If the value of ``employee-short-loc-hlist-rst`` is appropriate as-is for
+    this section, you may delete this entire section outright; doing so causes
+    most views to fall back to the value of ``employee-short-loc-hlist-rst``
+    when this section is requested.
+
+    If this change is not worth mentioning to Customer Service at all, then
+    delete the body of this section, but retain the section label; doing so
+    will cause the relevant views to *not* auto-fall-back to the text in
     ``employee-short-loc-hlist-rst``.
-
-    This field is a single large reStructuredText blob.  If you must explain details, then do it.  Don't be
-    afraid to write small, dense text here; the people reading this read a lot of documentation on a lot of
-    products, and excluding irrelevant information will make them happy.
 
 employee-testing-loc-rst:
   en-US: |
-    Explain what needs to be tested (new things to test) and/or re-tested (impact requiring regression testing).
-    Target audience is QA.
+    Explain what needs to be tested (new things to test) and/or re-tested
+    (impact requiring regression testing).  Target audience is QA.
 
-    In addition to informing QA of what to test/re-test, this field also is used by QA as a "diff" to be applied
-    to their official test plans.
+    In addition to informing QA of what to test/re-test, this field also is
+    used by QA as a "diff" to be applied to their official test plans.
 
-    This field is a single large reStructuredText blob.  Go wild.  Explaining details is good.
+    This field is a single large reStructuredText blob.  Go wild.  Explaining
+    details is good.
 '''
