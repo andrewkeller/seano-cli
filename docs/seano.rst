@@ -130,7 +130,7 @@ To edit the note most recently modified::
     $ seano edit -m
 
 Say, 4 commits ago, in commit ``5c6ff85ffc76022e8c525f23e7cff1726bb3aaee``, you created a note stored at
-``doc/seano-db/v1/46/543fbda3bedd85c50385ffc19fe576.yaml``.  All of the following will find it::
+``docs/seano-db/v1/46/543fbda3bedd85c50385ffc19fe576.yaml``.  All of the following will find it::
 
     $ seano edit HEAD~~~~    # 4 commits ago
     $ seano edit 5c6ff85     # Git commit ID
@@ -218,7 +218,7 @@ If the project has never used ``seano`` before, you must first create the ``sean
 To import old notes into an existing ``seano`` database:
 
 1. If the release for which you are importing does not exist as a tag in Git (or if you are not using Git), you must
-   inform ``seano`` of the existence of the release.  To do that, open ``doc/seano-db/seano-config.yaml`` in your
+   inform ``seano`` of the existence of the release.  To do that, open ``docs/seano-db/seano-config.yaml`` in your
    favorite text editor, and in the ``releases`` list, make sure a release is defined with the name of the release
    you're importing.  The list looks something like this:
 
