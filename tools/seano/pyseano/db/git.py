@@ -300,9 +300,9 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                 # Fire up the massive commit graph dump.  Example output:
                 #
                 # 1     a8dc74cb0fca0405ce4f9ecc8f2718b2accb6dc6 7b936ed3b4116e2615c6fdf1c119823f6c2a8e9c (tag: refs/tags/v1.2.3, refs/remotes/origin/master, refs/remotes/origin/HEAD)
-                # 2     A       doc/seano-db/v1/60/8bb47a848f6e8949c5f2545b0d0056.yaml
-                # 3     R100    mac/doc/seano-db/v1/ae/55628fcf4f49975d7c949c52be8bc7.yaml       doc/seano-db/v1/42/713c898b24a0220133cc9696f990ab.yaml
-                # 4     D       mac/doc/seano-db/v1/ef/9a7df3ab58c8583a42f258ac8cf0b1.yaml
+                # 2     A       docs/seano-db/v1/60/8bb47a848f6e8949c5f2545b0d0056.yaml
+                # 3     R100    mac/docs/seano-db/v1/ae/55628fcf4f49975d7c949c52be8bc7.yaml       docs/seano-db/v1/42/713c898b24a0220133cc9696f990ab.yaml
+                # 4     D       mac/docs/seano-db/v1/ef/9a7df3ab58c8583a42f258ac8cf0b1.yaml
                 # 5     M       some/other/file.txt
                 #
                 #   1. Commit hash; parent hashes (missing if none); refs (missing if none)
