@@ -30,7 +30,9 @@ class GitSeanoDatabase(GenericSeanoDatabase):
             self.repo = os.path.abspath(os.path.join(self.path, cdup))
 
             # Cache the list of deleted releases so that the ref parser can know to silenty swallow them:
-            self.deleted_releases = [x['name'] for x in self.config.get('releases', []) if x.get('delete', False)]
+            self.deleted_releases = [x['name']
+                                     for x in (self.config.get('releases', None) or [])
+                                     if x.get('delete', False)]
 
     def is_valid(self):
         # If super doesn't think this is valid, then none of our core required files exist; bail.
