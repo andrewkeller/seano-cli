@@ -25,7 +25,9 @@ class GenericSeanoDatabase(object):
         self.path = str(os.path.abspath(path))
         self.db_objs = os.path.join(self.path, SEANO_DB_SUBDIR)
 
-        # Load all configurations from disk, beginning with the database's configuration:
+        # Load all configurations from disk, beginning with the annex
+        # (so that anything in the database configuration overrides the annex):
+
         self.config = dict()
         def load_file(cfg, is_required):
             try:
@@ -37,9 +39,9 @@ class GenericSeanoDatabase(object):
                     log.warning("unusual error while trying to read %s: %s", cfg, e)
                     sys.exit(1)
 
-        load_file(os.path.join(path, SEANO_CONFIG_FILE), True)
         if config_annex_path:
             load_file(config_annex_path, False)
+        load_file(os.path.join(path, SEANO_CONFIG_FILE), True)
 
         # Possibly overwrite some database configurations if they were provided to this constructor:
 

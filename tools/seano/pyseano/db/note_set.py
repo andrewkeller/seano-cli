@@ -121,6 +121,7 @@ class NoteSet(object):
             found_something = False
             for possibility in release_dicts[release_order[-1]].get('after', set()):
                 if possibility in releases_togo:
+                    log.debug('Identified next oldest release: %s', possibility)
                     release_order.append(possibility)
                     releases_togo.remove(possibility)
                     found_something = True
