@@ -11,11 +11,13 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(__file__, '..', '..', '..', '..', '..')))
 
 import logging
+from support.seano.views.ce_sphinx_1 import compile_seano_ce_sphinx_1
 from support.seano.views.qa_notes import compile_qa_notes
 
 log = logging.getLogger(__name__)
 
 format_functions = {
+    'ce-sphinx-1': compile_seano_ce_sphinx_1,
     'qa-notes': compile_qa_notes,
 }
 
