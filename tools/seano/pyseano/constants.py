@@ -177,15 +177,8 @@ cs-technical-loc-rst:
     good, but tend toward environmental and human information over API
     architecture explanations.
 
-    If the value of ``employee-short-loc-hlist-rst`` is appropriate as-is for
-    this section, you may delete this entire section outright; doing so causes
-    most views to fall back to the value of ``employee-short-loc-hlist-rst``
-    when this section is requested.
-
     If this change is not worth mentioning to Customer Service at all, then
-    delete the body of this section, but retain the section label; doing so
-    will cause the relevant views to *not* auto-fall-back to the text in
-    ``employee-short-loc-hlist-rst``.
+    delete this section.
 
 employee-testing-loc-rst:
   en-US: |
