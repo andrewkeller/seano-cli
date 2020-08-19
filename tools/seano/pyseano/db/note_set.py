@@ -159,6 +159,7 @@ class NoteSet(object):
 
     def get_note(self, filename, uid):
         if uid not in self.notes:
+            log.debug('Loading note %s from disk (from %s)', uid, filename)
             # Start with a template note containing the given information:
             data = {
                 'id': uid,
@@ -167,10 +168,16 @@ class NoteSet(object):
             self.notes[uid] = data
 
             # Overwrite all members of the template with what exists on disk:
-            with open(filename, 'r') as f:
-                for d in yaml.load_all(f, Loader=yaml.FullLoader):
-                    for k, v in d.items():
-                        self.note_setattr(filename, uid, k, False, v)
+            try:
+                with open(filename, 'r') as f:
+                    for d in yaml.load_all(f, Loader=yaml.FullLoader):
+                        for k, v in d.items():
+                            self.note_setattr(filename, uid, k, False, v)
+
+            except:
+                log.error('Something exploded while trying to load a note from disk.  '
+                          'We were trying to load the note with id %s, located at %s', uid, filename)
+                raise
 
         return self.notes[uid]
 

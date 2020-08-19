@@ -116,7 +116,11 @@ class GenericSeanoDatabase(object):
 
     def get_notes_matching_pattern(self, pattern, include_modified):
         # Even without a repository, we can still search the database for filenames that matches the given pattern.
-        m = re.match(r'^([0-9a-fA-F]{2})/?([0-9a-fA-F]*)$', pattern)
+        # ABK: Deliberately accept both Unix and Windows slashes here, because worst case scenario, you may be
+        #      on Windows, running git from Git-Bash, but running seano from a Windows command prompt (or vice-versa!)
+        #      Thus, just because we *think* we know which slashes to use doesn't mean we should ban the other
+        #      kind.  Just accept both, on all platforms, all the time.
+        m = re.match(r'^([0-9a-fA-F]{2})[/\\]?([0-9a-fA-F]*)$', pattern)
         if not m:
             return ([], ["refusing to glob '%s' on disk in the seano database" % (pattern,)])
         pat = m.group(1) + os.sep + m.group(2) + '*' + SEANO_NOTE_EXTENSION
