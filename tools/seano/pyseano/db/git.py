@@ -312,6 +312,9 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                 #   3. Renamed files (track rename in `heap`)
                 #   4. Deleted files (ban this file from ever being reported)
                 #   5. Modified files (report this note iff `include_modified`)
+                #
+                # ABK: WARNING: The slashes in the paths are ALWAYS forward slashes (/), even on Windows.
+                #      More on that later.
 
                 # ABK: For performance reasons, slurp stdout instead of loading the entire Git history all at once.
                 #      Because we're yielding results instead of returning a final list, the caller can deallocate
@@ -394,8 +397,23 @@ class GitSeanoDatabase(GenericSeanoDatabase):
         # You should assume that notes in this structure are multi-linked!
         notes = {}  # filename -> { note dict }
 
-        primary_note_prefix = os.path.relpath(self.db_objs, self.repo) + os.sep
-        primary_note_suffix = SEANO_NOTE_EXTENSION
+        primary_note_pattern = ''.join([
+            # Only detect notes that start with...
+            '^',
+            # ... the path to the v1 folder inside the objects database.
+            # (git outputs these paths with forward slashes on all platforms!)
+            '/'.join(map(re.escape, os.path.relpath(self.db_objs, self.repo).split(os.sep))),
+            # For completeness, since v1 is a folder, end with another slash
+            # (git outputs these paths with forward slashes on all platforms!)
+            '/',
+            # Within the v1 folder, allow any non-empty file/folder...
+            '.+',
+            # ... so long as it ends with the correct file extension.
+            re.escape(SEANO_NOTE_EXTENSION),
+            '$',
+        ])
+        log.debug('pattern used to detect new notes is %s', primary_note_pattern)
+        primary_note_regex = re.compile(primary_note_pattern, re.IGNORECASE)
 
         for commit in yield_commits():
             log.debug('Investigating commit %s', commit.commit_id)
@@ -491,6 +509,18 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                 current_releases[p] = (current_releases.get(p, set()) | current_releases[commit.commit_id]) \
                                       - distant_releases[p]
 
+            # As part of general code style, we prefer native directory
+            # separators in all paths by default.  Git threw a monkey wrench into the mix earlier
+            # when git-log outputted name-statuses using forward slashes on all platforms.
+            #
+            # We're about to begin yielding paths to note files to the caller.  As we do this, we
+            # need to take care to convert all paths to native directory separators on-the-fly.
+            # The confusion that git-log introduced earlier should not leak to anything outside of
+            # this function.
+            dirsep_patch_func = None
+            if sys.platform in ['win32']:
+                dirsep_patch_func = lambda s: os.path.join(*s.split('/'))
+
             # Identify any reportable note files:
             notes_to_report = []
             for change in commit.raw_name_statuses:
@@ -498,24 +528,31 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                 code = change[0]
                 if code == 'A' or code == 'C' or (include_modified and code == 'M'):
                     fname = change[1]
-                    if fname in notes or (fname.startswith(primary_note_prefix) and fname.endswith(primary_note_suffix)):
+                    if fname in notes or primary_note_regex.search(fname):
                         # Report this note!
+                        if dirsep_patch_func:
+                            fname = dirsep_patch_func(fname)
                         n = notes.get(fname, dict(path=fname))
                         notes_to_report.append(n)
                     continue
                 if code == 'R100':
                     fsrc = change[1]
                     fdst = change[2]
-                    if fdst in notes or (fdst.startswith(primary_note_prefix) and fdst.endswith(primary_note_suffix)):
+                    if fdst in notes or primary_note_regex.search(fname):
                         # Alias the note to both filenames
+                        if dirsep_patch_func:
+                            fsrc = dirsep_patch_func(fsrc)
+                            fdst = dirsep_patch_func(fdst)
                         n = notes.get(fdst, notes.get(fsrc, dict(path=fdst)))
                         notes[fsrc] = n
                         notes[fdst] = n
                     continue
                 if code == 'D':
                     fname = change[1]
-                    if fname in notes or (fname.startswith(primary_note_prefix) and fname.endswith(primary_note_suffix)):
+                    if fname in notes or primary_note_regex.search(fname):
                         # Mark the note as "never report"
+                        if dirsep_patch_func:
+                            fname = dirsep_patch_func(fname)
                         n = notes.get(fname, dict(path=fname))
                         n['delete'] = True
                     continue

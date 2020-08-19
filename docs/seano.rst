@@ -135,11 +135,21 @@ Say, 4 commits ago, in commit ``5c6ff85ffc76022e8c525f23e7cff1726bb3aaee``, you 
     $ seano edit HEAD~~~~    # 4 commits ago
     $ seano edit 5c6ff85     # Git commit ID
     $ seano edit 46/543      # partial path with seano note ID
+    $ seano edit 46\543      # partial path with seano note ID (see note)
     $ seano edit 46543       # seano note ID
 
 To edit all notes created between ``v1.2.4`` and ``v1.2.5``::
 
     $ seano edit v1.2.4..v1.2.5
+
+.. note::
+
+    When you give ``seano edit`` a partial path, it will accept either Unix slashes or Windows slashes on all
+    platforms.  This is because, in particular on Windows, it's not hard to have paths formatted either way on
+    the same physical machine (i.e., Windows command-line vs. Linux subsystem).  Factoring in SSH and other
+    forms of remote control, the reality is that on lots of OSs, it's not hard to have the "wrong" slashes at
+    any given time.  To make copy/paste easier in the face of directory slash differences, ``seano edit`` accepts
+    either kind all the time.
 
 
 Reserved keys
