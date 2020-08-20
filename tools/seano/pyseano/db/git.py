@@ -528,7 +528,7 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                 code = change[0]
                 if code == 'A' or code == 'C' or (include_modified and code == 'M'):
                     fname = change[1]
-                    if fname in notes or primary_note_regex.search(fname):
+                    if fname in notes or primary_note_regex.match(fname):
                         # Report this note!
                         if dirsep_patch_func:
                             fname = dirsep_patch_func(fname)
@@ -538,7 +538,7 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                 if code == 'R100':
                     fsrc = change[1]
                     fdst = change[2]
-                    if fdst in notes or primary_note_regex.search(fname):
+                    if fdst in notes or primary_note_regex.match(fdst):
                         # Alias the note to both filenames
                         if dirsep_patch_func:
                             fsrc = dirsep_patch_func(fsrc)
@@ -549,7 +549,7 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                     continue
                 if code == 'D':
                     fname = change[1]
-                    if fname in notes or primary_note_regex.search(fname):
+                    if fname in notes or primary_note_regex.match(fname):
                         # Mark the note as "never report"
                         if dirsep_patch_func:
                             fname = dirsep_patch_func(fname)
