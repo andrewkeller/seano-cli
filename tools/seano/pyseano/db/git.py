@@ -386,9 +386,7 @@ class GitSeanoDatabase(GenericSeanoDatabase):
 
         # Prepare to traverse the commit graph
 
-        # Because HEAD is an implicit release (above), we want its commit ID,
-        # even if it's not a tag (tags get their commit IDs reported automatically).
-        has_reported_head_commit_id = False
+        is_first_iteration = True
 
         current_releases = {}   # set() per-commit
         distant_releases = {}   # set() per-commit
@@ -418,21 +416,25 @@ class GitSeanoDatabase(GenericSeanoDatabase):
         for commit in yield_commits():
             log.debug('Investigating commit %s', commit.commit_id)
 
-            if not current_releases:
-                # This is the first iteration of this loop.  Seed the release tracking structures:
+            if is_first_iteration:
+                # This is the first iteration of the git scanner loop.
+                is_first_iteration = False
 
-                # This code is a bit clever.  Here's what's happening:
-                #   - regardless, distant_releases only needs commit.commit_id defined to an empty set.
-                #   - for current_releases, commit.commit_id gets set to:
-                #       - if releases were automatically identified, then that means HEAD is tagged and
-                #         we have no uncommitted work.  We do *not* want the implicit HEAD release defined
-                #         out ahead of any automatic releases.  Use auto-detected releases right now.
-                #       - if releases were not automatically identified, then that means either HEAD is
-                #         not tagged or we have uncommitted changes.  This means that we *must* have an
-                #         implicit HEAD release defined out in front of any tag we detect automatically.
-                local_current_releases = commit.releases or [self.config['current_version']]
+                # We've already yielded the first release -- well, we yielded its name, and nothing else -- but
+                # the point is, it exists, but contains nothing yet.
 
-                # Initialize current & future releases caches:
+                # We should report the commit ID of the HEAD release:
+
+                yield {'releases' : {
+                    self.config['current_version'] : {
+                        'commit' : commit.commit_id,
+                    },
+                }}
+
+                # Next, seed our tracking structures:
+
+                local_current_releases = [self.config['current_version']]
+
                 current_releases = {    # set() per-commit
                     commit.commit_id : set(local_current_releases),
                 }
@@ -440,18 +442,20 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                     commit.commit_id : set(),
                 }
 
-                # No point in removing previously defined releases (no previous releases exist)
+                # If self.config['current_version'] is identical to a tag we're building on, then remove that
+                # tag from the releases list that we will soon parse.  Declaring a release more than once is
+                # a fatal error, which is a good thing -- but when building on a tag, it's common for the tag
+                # on the HEAD commit to be identical to self.config['current_version']; when that happens,
+                # don't explode.
 
-                # No point in notifying the caller of discovered release ancestry (no previous release exists)
+                commit.releases = list(filter(lambda v: v != self.config['current_version'], commit.releases))
 
-            elif commit.releases:
-                # This means:
-                #   - this is not the first commit we are investigating
-                #   - but yet, we found a new release tag
-                #       - every release in commit.releases is automatically an ancestor
-                #         of every release in current_releases[commit.commit_id]
-                #       - every release in current_releases[commit.commit_id]
-                #         should get moved to distant_releases[commit.commit_id]
+            if commit.releases:
+                # We found a new release tag!  This means:
+                #   - every release in commit.releases is automatically an ancestor
+                #     of every release in current_releases[commit.commit_id]
+                #   - every release in current_releases[commit.commit_id]
+                #     should get moved to distant_releases[commit.commit_id]
 
                 # We found release tag(s).  Parse them.
                 local_current_releases = set(commit.releases)
@@ -495,13 +499,6 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                 # Update current & future releases caches:
                 current_releases[commit.commit_id] = local_current_releases
                 distant_releases[commit.commit_id] = local_distant_releases
-
-            # Report the commit of the HEAD release (applicable when HEAD is not tagged or has uncommitted changes):
-            if not has_reported_head_commit_id and commit.commit_id:
-                yield {'releases' : {
-                    x : { 'commit' : commit.commit_id } for x in local_current_releases
-                }}
-                has_reported_head_commit_id = True
 
             # Propagate release ancestry knowledge to the parent commits:
             for p in commit.parents:
