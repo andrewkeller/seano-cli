@@ -330,8 +330,7 @@ class GitSeanoDatabase(GenericSeanoDatabase):
 
                 def possibly_dump_stderr():
                     if p.poll() is not None and p.returncode != 0:
-                        log.error('unable to read commit graph: %s', p.stderr.read().strip())
-                        sys.exit(1)
+                        raise SeanoFatalError('unable to read commit graph: %s' % (p.stderr.read().strip(),))
 
                 accumulator = []
                 commit_begin_regex = re.compile('^[0-9a-f]{6,}')

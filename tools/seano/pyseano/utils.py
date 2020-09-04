@@ -19,6 +19,19 @@ unicode_str_type = str if sys.hexversion >= 0x3000000 else unicode
 log = logging.getLogger(__name__)
 
 
+class SeanoFatalError(Exception):
+    '''
+    An exception type that is used to declare a fatal error -- an error where you might want to
+    just kill the app.
+
+    In fact, early versions of seano literally did kill the app.  However, as we've grown, it
+    turns out that killing the app is not friendly to unit tests.  So, when some low-level code
+    wants to kill the app, it raises this exception instead.  seano itself will then voluntarily
+    die with non-zero exit status, and unit tests catch the exception and move on.
+    '''
+    pass
+
+
 def coerce_to_str(s):
     'Coerces the given value to whatever the `str` type is on this Python.'
     if sys.hexversion >= 0x3000000:
@@ -52,16 +65,14 @@ def coerce_to_unicode_str(s):
 
 def write_file(filename, contents):
     if os.path.isfile(filename):
-        log.error("cannot write new file (already exists): %s", filename)
-        sys.exit(1)
+        raise SeanoFatalError("cannot write new file (already exists): %s" % (filename,))
     try:
         with open(filename, "w") as f:
             f.write(contents)
         return
     except IOError as e:
         if e.errno != errno.ENOENT:
-            log.error("cannot write new file: %s", e)
-            sys.exit(1)
+            raise SeanoFatalError("cannot write new file: %s" % (e,))
     os.makedirs(os.path.dirname(filename))
     with open(filename, "w") as f:
         f.write(contents)
@@ -89,8 +100,7 @@ def h_file(*files):
     m = hashlib.sha1()
     for f in files:
         if os.path.isdir(f):
-            log.error("Assertion failed: not a file: %s", f)
-            sys.exit(1)
+            raise SeanoFatalError("Assertion failed: not a file: %s" % (f,))
         m.update(coerce_to_ascii_str(str(os.path.getmtime(f))))
     return m.hexdigest()
 

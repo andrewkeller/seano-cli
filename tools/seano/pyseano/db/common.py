@@ -4,7 +4,7 @@ pyseano/db/common.py
 Organizes a set of release notes, does some sanity checking, and serializes as Json
 """
 
-from pyseano.utils import list_if_not_already, ascii_str_type, unicode_str_type
+from pyseano.utils import SeanoFatalError, list_if_not_already, ascii_str_type, unicode_str_type
 import logging
 import sys
 import yaml
@@ -150,8 +150,7 @@ class SeanoDataAggregator(object):
 
             name = r.get('name', None)
             if not name:
-                log.error("fatal: no name set on releases[%d]", index)
-                sys.exit(1)
+                raise SeanoFatalError("no name set on releases[%d]" % (index,))
 
             for key, value in r.items():
                 self.release_setattr(name, key, False, value)
@@ -262,9 +261,8 @@ class SeanoDataAggregator(object):
         # Ugh.  We have to do a merge.
 
         if type(obj[key]) != type(value):
-            log.error("fatal: cannot merge different types %s (%s) and %s (%s) on %s['%s']",
-                      type(obj[key]), obj[key], type(value), value, obj_desc, key)
-            sys.exit(1)
+            raise SeanoFatalError("cannot merge different types %s (%s) and %s (%s) on %s['%s']"
+                                 % (type(obj[key]), obj[key], type(value), value, obj_desc, key))
 
         if type(obj[key]) in [list]:
             obj[key] = obj[key] + value
@@ -278,6 +276,5 @@ class SeanoDataAggregator(object):
             obj[key] = value
             return
 
-        log.error("fatal: cannot merge unknown type %s (%s + %s) on %s['%s']",
-                  type(obj[key]), obj[key], value, obj_desc, key)
-        sys.exit(1)
+        raise SeanoFatalError("cannot merge unknown type %s (%s + %s) on %s['%s']"
+                             % (type(obj[key]), obj[key], value, obj_desc, key))

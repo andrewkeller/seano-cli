@@ -11,6 +11,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(__file__, '..', '..', '..', '..', '..')))
 
 import logging
+from pyseano.utils import SeanoFatalError
 from support.seano.views.ce_sphinx_1 import compile_seano_ce_sphinx_1
 from support.seano.views.qa_notes import compile_qa_notes
 
@@ -27,16 +28,13 @@ format_choices = list(format_functions.keys());
 def format_query_output(src, format, out):
 
     if not src:
-        log.error('Invalid seano query output file: (empty string)')
-        sys.exit(1)
+        raise SeanoFatalError('Invalid seano query output file: (empty string)')
 
     if not out:
-        log.error('Invalid destination file: (empty string)')
-        sys.exit(1)
+        raise SeanoFatalError('Invalid destination file: (empty string)')
 
     if format not in format_functions:
-        log.error('Invalid format "%s": not supported', format)
-        sys.exit(1)
+        raise SeanoFatalError('Invalid format "%s": not supported' % (format,))
 
     if src in ['-']:
         srcdata = sys.stdin.read()

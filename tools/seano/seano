@@ -8,9 +8,11 @@ Interrogates and manipulates a CE Release Notes (seano) database.
 """
 
 from pyseano.cmd import *
+from pyseano.utils import SeanoFatalError
 import argparse
 import logging
 import os
+import sys
 
 log = logging.getLogger(__name__)
 
@@ -94,7 +96,22 @@ def main():
     kwargs = dict(vars(ns))
     del kwargs['func']
     del kwargs['verbose']
-    ns.func(**kwargs)
+    try:
+        ns.func(**kwargs)
+    except SeanoFatalError as e:
+        # Expectation is that any supplimental errors/warnings are already logged, and that
+        # this exception contains an error message to be printed, plus also indicates that
+        # we should exit with a non-zero exit status.
+
+        if ns.verbose:
+            # Show the stack trace of this error, followed by the error message, and then die:
+            raise
+
+        # Else, only print the error message, and then die:
+        sys.stderr.write('fatal: ')
+        sys.stderr.write(e.message)
+        sys.stderr.write(os.linesep)
+        sys.exit(1)
 
 
 if __name__ == '__main__':
