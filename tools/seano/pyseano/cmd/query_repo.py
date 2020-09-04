@@ -13,8 +13,7 @@ log = logging.getLogger(__name__)
 
 def query_release_notes(db, out, **db_kwargs):
     if not out:
-        log.error("Invalid desitnation file: (empty string)")
-        sys.exit(1)
+        raise SeanoFatalError("Invalid desitnation file: (empty string)")
 
     data = open_seano_database(db, **db_kwargs).query()
     data = json.dumps(data, sort_keys=True)

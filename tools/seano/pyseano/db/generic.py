@@ -11,7 +11,6 @@ import glob
 import logging
 import os
 import re
-import sys
 import uuid
 import yaml
 
@@ -36,8 +35,7 @@ class GenericSeanoDatabase(object):
                         self.config.update(d)
             except IOError as e:
                 if is_required or e.errno != errno.ENOENT:
-                    log.warning("unusual error while trying to read %s: %s", cfg, e)
-                    sys.exit(1)
+                    raise SeanoFatalError("unusual error while trying to read %s: %s" % (cfg, e))
 
         if config_annex_path:
             load_file(config_annex_path, False)
@@ -111,8 +109,7 @@ class GenericSeanoDatabase(object):
         os.rename(from_filename, to_filename)
 
     def most_recently_added_notes(self, include_modified):
-        log.error("Database is not repository-backed; unable to intuit which release note is latest")
-        sys.exit(1)
+        raise SeanoFatalError("Database is not repository-backed; unable to intuit which release note is latest")
 
     def get_notes_matching_pattern(self, pattern, include_modified):
         # Even without a repository, we can still search the database for filenames that matches the given pattern.

@@ -5,11 +5,11 @@ Interactive command-line implementation of initializing a new seano database.
 """
 
 from pyseano.constants import *
+from pyseano.utils import SeanoFatalError
 import errno
 import logging
 import os
 import subprocess
-import sys
 
 log = logging.getLogger(__name__)
 
@@ -19,8 +19,7 @@ def make_new_release_notes_db(db):
         os.makedirs(db)
     except OSError as e:
         if e.errno != errno.EEXIST:
-            log.error("cannot initialize new release notes database: %s", e)
-            sys.exit(1)
+            raise SeanoFatalError("cannot initialize new release notes database: %s" % (e,))
     cfg = os.path.join(db, SEANO_CONFIG_FILE)
     if not os.path.isfile(cfg):
         with open(cfg, "w") as f:

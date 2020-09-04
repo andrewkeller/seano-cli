@@ -25,13 +25,11 @@ def edit_latest_release_note(db, include_wip, include_modified, patterns):
         for pattern in patterns:
             new_files, errors = db.get_notes_matching_pattern(pattern, include_modified=include_modified)
             if not new_files:
-                log.error('Unable to resolve pattern:\n    %s' % ('\n    '.join(errors)))
-                sys.exit(1)
+                raise SeanoFatalError('Unable to resolve pattern:\n    %s' % ('\n    '.join(errors),))
             log.debug("Pattern '%s' yielded:\n    %s", pattern, "\n    ".join(new_files))
             files.extend(new_files)
     if not files:
-        log.warning("Release notes database is empty")
-        sys.exit(1)
+        raise SeanoFatalError("Release notes database is empty")
     files = sorted(list(set(files)))
     log.debug("About to edit:\n    %s", "\n    ".join(files))
     edit_files(files)
