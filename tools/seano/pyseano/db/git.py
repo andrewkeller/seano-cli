@@ -209,11 +209,11 @@ class GitSeanoDatabase(GenericSeanoDatabase):
             # Info about a single release:
             {
                 'releases' : {
-                    <name> : {                      # name of the release
-                        'after' : [<name>, ...],    # (optional) list of releases after
-                        'before' : [<name>, ...],   # (optional) list of releases before
-                        'commit' : <commit-id>,     # commit of this release
-                        ...                         # (optional) more juicy info?
+                    <name> : {                              # name of the release
+                        'after' : [{'name': <name>, ...}],  # (optional) associative array of releases after
+                        'before' : [{'name': <name>, ...}], # (optional) associative array of releases before
+                        'commit' : <commit-id>,             # commit of this release
+                        ...                                 # (optional) more juicy info?
                     }
                 }
             }
@@ -493,10 +493,10 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                     for older in local_current_releases:
                         yield {'releases' : {
                             older : {
-                                'before' : [newer],
+                                'before' : [{'name': newer}],
                             },
                             newer : {
-                                'after' : [older],
+                                'after' : [{'name': older}],
                             },
                         }}
 

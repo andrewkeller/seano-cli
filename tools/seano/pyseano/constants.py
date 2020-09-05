@@ -42,7 +42,7 @@ project_name:
 # Hint: You really should track this project in Git, and the delete this
 # configuration here.
 #parent_versions:
-#- 0.0.0
+#- name: 0.0.0
 
 # Even when Zarf and Git are used to automate release identification,
 # inevitably, you will want to add per-release metadata so that the data can
@@ -72,18 +72,21 @@ releases:
 #   releases:
 #
 #   - name:  1.2.0                  *  Implement birddog (tags: v1.2.0)
-#     after: 1.1.1                  |
+#     after:                        |
+#     - name: 1.1.1                 |
 #                                   |
 #   - name:  1.1.1                  *  Merge v1.0.5 into master (tags: v1.1.1)
 #     after:                        |\
-#     - 1.1.0                       | |
-#     - 1.0.5                       | |
+#     - name: 1.1.0                 | |
+#     - name: 1.0.5                 | |
 #                                   | |
 #   - name:  1.0.5                  | *  Fix bug (tags: v1.0.5)
-#     after: 1.0.4                  | |
+#     after:                        | |
+#     - name: 1.0.4                 | |
 #                                   | |
 #   - name:  1.1.0                  * |  Implement fishcat (tags: v1.1.0)
-#     after: 1.0.4                  | |
+#     after:                        | |
+#     - name: 1.0.4                 | |
 #                                   |/
 #   - name: 1.0.4                   *  Implement foobar (tags: v1.0.4)
 #     ... you get the picture       |
@@ -98,12 +101,14 @@ releases:
 #   releases:
 #
 #   - name:  1.1.0                  *  Final touches (tags: v1.1.0)
-#     after: 1.1.0b1                |
+#     after:                        |
+#     - name: 1.1.0b1               |
 #                                   |
 #   - name:  1.1.0b1                *  Public beta (no tag!)
 #                                   |
 #   - name:   1.0.0                 *  Implement foobar (tags: v1.0.0)
-#     before: 1.1.0b1               |
+#     before:                       |
+#     - name: 1.1.0b1               |
 #
 # There's a lot to unpack in the above example.  Here's what's going on:
 # * Even though 1.1.0 is auto-detected via Git, we're manually declaring it so

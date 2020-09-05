@@ -4,7 +4,9 @@ pyseano/db/common.py
 Organizes a set of release notes, does some sanity checking, and serializes as Json
 """
 
+from pyseano.db.schema_upgrade import upgrade_note_schema, upgrade_release_schema
 from pyseano.utils import SeanoFatalError, list_if_not_already, ascii_str_type, unicode_str_type
+import itertools
 import logging
 import sys
 import yaml
@@ -12,10 +14,31 @@ import yaml
 log = logging.getLogger(__name__)
 
 
+def structure_deep_copy(src, key_filter=lambda _: True):
+    if isinstance(src, list):
+        return [structure_deep_copy(x, key_filter=key_filter) for x in src]
+    if isinstance(src, set):
+        return set([structure_deep_copy(x, key_filter=key_filter) for x in src])
+    if isinstance(src, dict):
+        return {k: structure_deep_copy(v, key_filter=key_filter) for k, v in src.items() if key_filter(k)}
+    if isinstance(src, ascii_str_type):
+        return ascii_str_type(src)
+    if isinstance(src, unicode_str_type):
+        return unicode_str_type(src)
+    if src is None or isinstance(src, bool):
+        return src
+    raise SeanoFatalError('structure_deep_copy: unsupported value of type %s: %s' % (type(src).__name__, src))
+
+
 class SeanoDataAggregator(object):
     def __init__(self, config):
-        self.releases = {}  # Releases *do not* contain notes (unless hard-coded in seano-config.yaml)
-        self.notes = {}     # Notes mention releases *by name*
+        # Define structures to store data as we assemble things.
+        # Releases and notes are stored separately because they are associated N:N, and they each receive
+        # incremental updates throughout the load process.  When an information fragment comes in, we want
+        # to be able to apply it quickly and easily, without needing to search.  Notes are injected into
+        # releases at the last minute, right before dump() returns.
+        self.releases = {}
+        self.notes = {}
 
         # Use the given config to import (pre-populate) anything hard-coded.
 
@@ -23,15 +46,26 @@ class SeanoDataAggregator(object):
         self.current_version = config['current_version'] # must exist or else explode
         self.get_release(self.current_version)
 
-        # Possibly add manually-configured release ancestors on the current version:
+        # Import all manually configured release ancestors of HEAD:
         # (This is usually only applicable in non-SCM-backed seano databases)
         if 'parent_versions' in config:
-            self.release_setattr(self.current_version, 'after', False, set(config['parent_versions']))
-            for p in config['parent_versions']:
-                self.release_setattr(p, 'before', False, set([self.current_version]))
+            self.release_setattr(self.current_version, 'after', False, config['parent_versions'])
 
         # Import all manually declared releases:
-        self.load_manual_releases(config.get('releases', None) or [])
+        index = -1
+        for r in config.get('releases') or []:
+            index = index +1
+
+            if r.get('delete', False):
+                # This release has been deleted; pretend it does not exist.
+                continue
+
+            name = r.get('name', None)
+            if not name:
+                raise SeanoFatalError("no name set on releases[%d]" % (index,))
+
+            for k, v in r.items():
+                self.release_setattr(name, k, False, v)
 
 
     def import_release_info(self, name, **automatic_attributes):
@@ -53,92 +87,98 @@ class SeanoDataAggregator(object):
 
 
     def dump(self):
-        # Assemble each release for returning, pruning private data out as we go:
-        release_dicts = {}
-        for name, info in self.releases.items():
-
-            # Clone so we can make edits:
-            info = dict(info)
-
-            # Remove all accepts_auto_* keys:
-            for k in [x for x in info.keys() if x.startswith('accepts_auto_')]:
-                del info[k]
-
-            # Also clone each individual note so we can make edits:
-            info['notes'] = [dict(x) for x in info.get('notes', None) or []]
-
-            # Remove all accepts_auto_* keys from each note:
-            for note in info['notes']:
-                for k in [x for x in note.keys() if x.starts('accepts_auto_')]:
-                    del note[k]
-
-            release_dicts[name] = info
+        # Start by using the releases dictionary as a template:
+        release_dicts = structure_deep_copy(self.releases)
 
         # Inject each note into each release:
         for note in self.notes.values():
 
             # Clone so we can make edits:
-            note = dict(note)
+            note = structure_deep_copy(note)
 
-            # Remove all accepts_auto_* keys:
-            for k in [x for x in note.keys() if x.startswith('accepts_auto_')]:
-                del note[k]
+            # Declare notes to be part of the HEAD release when no release is specified:
+            # (this is important for non-Git-backed databases; when the release is not
+            # specified, the default is HEAD)
+            if not note.get('releases'):
+                note['releases'] = [self.current_version]
 
-            # Sort/sanitize special keys in each note we care about:
-            if 'commits' in note:
-                note['commits'] = sorted(list(note['commits']))
-            note['releases'] = sorted(list(note.get('releases', None) or [self.current_version]), reverse=True) # [1]
-
-            #  [1]  Note that the `or` clause here is important for non-Git-backed databases; when releases are not
-            #       specified, the default is HEAD.  Also, if a change doesn't have a release, then the world explodes.
+            # Convert all sets into lists with predictable sort orders:
+            for k, v in note.items():
+                if isinstance(v, set):
+                    note[k] = sorted(list(v))
 
             # Append to each applicable release:
             for r in note['releases']:
                 release_dicts[r]['notes'] = (release_dicts[r].get('notes', None) or []) + [note]
 
         # Doubly-link the before and after lists on each release:
+        # Remember that these are associative arrays (lists of dictionaries), not lists of strings.
         for name, info in release_dicts.items():
-            for before in info.get('before', set()):
-                release_dicts[before]['after'] = release_dicts[before].get('after', set()) | set([name])
-            for after in info.get('after', set()):
-                release_dicts[after]['before'] = release_dicts[after].get('before', set()) | set([name])
+            for before in info.get('before', []):
+                self.assocary_generic_setattr(release_dicts[before['name']],
+                                              "release_dicts['%s']" % (before['name'],),
+                                              'after', True, [{'name': name}], 'name')
+            for after in info.get('after', []):
+                self.assocary_generic_setattr(release_dicts[after['name']],
+                                              "release_dicts['%s']" % (after['name'],),
+                                              'before', True, [{'name': name}], 'name')
 
         # Sort special keys in each release we care about:
         for name, info in release_dicts.items():
-            info['before'] = sorted(list(info.get('before', set())), reverse=True)
-            info['after'] = sorted(list(info.get('after', set())), reverse=True)
-            info['notes'] = sorted(info.get('notes', []), key=lambda x: x.get('id', None))
+            info['before'] = sorted(info.get('before', []), key=lambda x: x['name'])
+            info['after'] = sorted(info.get('after', []), key=lambda x: x['name'])
+            info['notes'] = sorted(info.get('notes', []), key=lambda x: x['id'])
+
+        # Remove all of the 'accepts_auto_' keys:
+        def my_key_filter(k):
+            if k.startswith('accepts_auto_'):
+                return False
+            return True
+        release_dicts = structure_deep_copy(release_dicts, key_filter=my_key_filter)
 
         # Define a sort order for the releases:
-        # ABK: This isn't a terribly great sort algorithm, but it should be fine in most cases.
-        #      If you're developing a 2D graph of the releases, then the sort order doesn't matter
-        #      at all, because you're going to use the before and after lists to reorder everything
-        #      anyways.  For a more common view, where everything is a flat list, having the list
-        #      of releases be sorted correctly by default is handy, because it lets you just go down
-        #      the list and print everything in order.  However, because the graph is 2D in reality,
-        #      "making a list" is setting yourself up for failure.  Sooner or later, someone is going
-        #      to come up with a commit graph that doesn't play well with this algorithm.  When that
-        #      happens, iterate as necessary.
+        # ABK: This sort algorithm behaves a lot like Git does, and should be good enough in most
+        #      cases.  If you're developing a fancy 2D graph of the releases, then the sort order
+        #      doesn't matter at all, because you're going to manually read the before and after
+        #      lists on each release to establish your topology.  For a more primitive 1D view
+        #      (where everything is a flat list), having the list of releases pre-sorted in some
+        #      sort of sane manner is handy, because it lets you just go down the list and print
+        #      everything in order, despite the concept of non-linear graph flattening being
+        #      somewhat non-trivial.
+        #
+        #      Because this algorithm is not tail-recursive, it will eventually overflow the
+        #      stack when we build up enough releases.  Iterate as necessary.
 
         release_order = []
         releases_togo = set(release_dicts.keys())
 
-        release_order.append(self.current_version)
-        releases_togo.remove(self.current_version)
+        def get_release_order(release):
 
-        while releases_togo:
-            found_something = False
-            for possibility in release_dicts[release_order[-1]].get('after', set()):
-                if possibility in releases_togo:
-                    log.debug('Identified next oldest release: %s', possibility)
-                    release_order.append(possibility)
-                    releases_togo.remove(possibility)
-                    found_something = True
-            if found_something: continue
-            possibility = sorted(list(releases_togo), reverse=True)[0]
-            log.info('Having trouble flattening ancestry history: %s might be in the wrong position.', possibility)
-            release_order.append(possibility)
-            releases_togo.remove(possibility)
+            # If this releas has already been visited, then return an empty list:
+            if release['name'] not in releases_togo:
+                return []
+
+            # Mark this release as visited:
+            releases_togo.remove(release['name'])
+
+            # Get a list of all of our unvisited parents:
+            parents = [x['name'] for x in release['after']]
+
+            # Get release order for each of the parents, from left to right, without
+            # repeating any ancestors:
+            order = [get_release_order(release_dicts[x]) for x in parents]
+
+            # Return this release name, followed by each of the parent lists, right-to-left:
+            return [release['name']] + list(itertools.chain(*reversed(order)))
+
+        release_order.extend(get_release_order(release_dicts[self.current_version]))
+
+        # As a final fallback, dump the remaining unselected releases at the end:
+
+        for x in sorted(list(releases_togo)):
+            log.info('Having trouble flattening ancestry history: %s might be in the wrong position.', x)
+            release_order.append(x)
+            releases_togo.remove(x)
 
         # Flatten into a list in the oder we decided on earlier, and return:
 
@@ -148,30 +188,12 @@ class SeanoDataAggregator(object):
     # internal plumbing:
 
 
-    def load_manual_releases(self, releases):
-        index = -1
-        for r in releases:
-            index = index +1
-
-            if r.get('delete', False):
-                # This release has been deleted; pretend it does not exist.
-                continue
-
-            name = r.get('name', None)
-            if not name:
-                raise SeanoFatalError("no name set on releases[%d]" % (index,))
-
-            for key, value in r.items():
-                self.release_setattr(name, key, False, value)
-
-
     def get_note(self, filename, uid):
         if uid not in self.notes:
             log.debug('Loading note %s from disk (from %s)', uid, filename)
             # Start with a template note containing the given information:
-            data = {
-                'id': uid,
-            }
+            data = {}
+            self.generic_setattr(data, 'notes[' + uid + ']', 'id', True, uid)
 
             self.notes[uid] = data
 
@@ -197,33 +219,21 @@ class SeanoDataAggregator(object):
 
 
     def note_setattr(self, filename, uid, key, is_auto, value):
-        if key in ['commits', 'releases']:
-            if not value:
-                # An empty list in Yaml shows up as None here.
-                # This auto-corrects anything False-ish into an empty set.
-                value = set()
-            else:
-                # For convenience, we let you enter single strings instead
-                # of forcing you to use the list syntax in Yaml all the time.
-                # For algorithm similicity here, standardize on a formal set.
-                value = set(list_if_not_already(value))
+        value = upgrade_note_schema(key, value)
+        # ABK: At this time, all keys are flat; we can use generic_setattr() for everything.
         self.generic_setattr(self.get_note(filename, uid), "notes['%s']" % (uid,), key, is_auto, value)
 
 
     def release_setattr(self, name, key, is_auto, value):
+        value = upgrade_release_schema(key, value)
         if key in ['notes']:
-            log.error('''releases should never directly set notes (that's done during the dump stage)''')
+            log.error('''this API does not yet support setting notes.  feature request?''')
             explode
         if key in ['before', 'after']:
-            if not value:
-                # An empty list in Yaml shows up as None here.
-                # This auto-corrects anything False-ish into an empty set.
-                value = set()
-            else:
-                # For convenience, we let you enter single strings instead
-                # of forcing you to use the list syntax in Yaml all the time.
-                # For algorithm similicity here, standardize on a formal set.
-                value = set(list_if_not_already(value))
+            # These keys are associative arrays.
+            self.assocary_generic_setattr(self.get_release(name), "release['%s']" % (name,),
+                                          key, is_auto, value, 'name')
+            return
         self.generic_setattr(self.get_release(name), "release['%s']" % (name,), key, is_auto, value)
 
 
@@ -287,3 +297,45 @@ class SeanoDataAggregator(object):
 
         raise SeanoFatalError("cannot merge unknown type %s (%s + %s) on %s['%s']"
                              % (type(obj[key]), obj[key], value, obj_desc, key))
+
+
+    def assocary_generic_setattr(self, obj, obj_desc, key, is_auto, value, inner_key):
+        '''
+        Merges the given value into the given object, assuming that the value is an associative array.
+        Associative arrays are, in this context, lists of dictionaries.  The given inner key is used to
+        match dictionaries in obj and value.
+
+        Once matching dictionaries are identified, generic_setattr() is used to merge all of the keys.
+        '''
+        if key not in obj:
+            # The associative array doesn't exist yet.  Create a new one, and let the merging logic
+            # (below) fill in the elements:
+            obj[key] = []
+
+        dest_assocary = obj[key]
+        src_assocary = value
+
+        if not isinstance(value, list):
+            raise SeanoFatalError('value provided is not an associative array: %s' % (value,))
+
+        for src_element in src_assocary:
+
+            # Fetch the destination element corresponding with this source element:
+
+            dest_element = list(filter(lambda x: x.get(inner_key) == src_element.get(inner_key), dest_assocary))
+
+            if len(dest_element) > 1:
+                raise SeanoFatalError("cannot merge associative array element %s['%s'][%s='%s'] because it is ambiguous"
+                                     % (obj_desc, key, inner_key, src_element.get(inner_key)))
+
+            if len(dest_element) < 1:
+                # No match; create the element so that we can perform a merge:
+                dest_element = [{}]
+                dest_assocary.append(dest_element[0])
+
+            dest_element = dest_element[0]
+
+            for x in src_element.keys():
+                self.generic_setattr(dest_element,
+                                     "%s['%s'][%s='%s']" % (obj_desc, key, inner_key, src_element.get(inner_key)),
+                                     x, is_auto, src_element[x])

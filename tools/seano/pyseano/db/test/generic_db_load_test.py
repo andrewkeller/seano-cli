@@ -112,9 +112,9 @@ releases:
 '''
         expected_config = {
             'current_version': 'HEAD',
-            'parent_versions': ['1.2.4'],
+            'parent_versions': [{'name': '1.2.4'}],
             'releases': [
-                {'name': '1.2.3', 'before': ['1.2.4'], 'after': ['1.2.2']},
+                {'name': '1.2.3', 'before': [{'name': '1.2.4'}], 'after': [{'name': '1.2.2'}]},
             ],
         }
         self.run_test(seano_config_data=sample_config,
@@ -135,9 +135,9 @@ releases:
 '''
         expected_config = {
             'current_version': 'HEAD',
-            'parent_versions': '1.2.4',
+            'parent_versions': [{'name': '1.2.4'}],
             'releases': [
-                {'name': '1.2.3', 'before': '1.2.4', 'after': '1.2.2'},
+                {'name': '1.2.3', 'before': [{'name': '1.2.4'}], 'after': [{'name': '1.2.2'}]},
             ],
         }
         self.run_test(seano_config_data=sample_config,

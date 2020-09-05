@@ -91,18 +91,18 @@ releases:
                 {
                     'name': '1.2.3',
                     'before': [],
-                    'after': ['1.2.2'],
+                    'after': [{'name': '1.2.2'}],
                     'notes': [],
                 },
                 {
                     'name': '1.2.2',
-                    'before': ['1.2.3'],
-                    'after': ['1.2.1'],
+                    'before': [{'name': '1.2.3'}],
+                    'after': [{'name': '1.2.1'}],
                     'notes': [],
                 },
                 {
                     'name': '1.2.1',
-                    'before': ['1.2.2'],
+                    'before': [{'name': '1.2.2'}],
                     'after': [],
                     'notes': [],
                 },
@@ -126,29 +126,29 @@ releases:
 '''
         expected = {
             'current_version': '1.2.4a5',
-            'parent_versions': ['1.2.3'],
+            'parent_versions': [{'name': '1.2.3'}],
             'releases': [
                 {
                     'name': '1.2.4a5',
                     'before': [],
-                    'after': ['1.2.3'],
+                    'after': [{'name': '1.2.3'}],
                     'notes': [],
                 },
                 {
                     'name': '1.2.3',
-                    'before': ['1.2.4a5'],
-                    'after': ['1.2.2'],
+                    'before': [{'name': '1.2.4a5'}],
+                    'after': [{'name': '1.2.2'}],
                     'notes': [],
                 },
                 {
                     'name': '1.2.2',
-                    'before': ['1.2.3'],
-                    'after': ['1.2.1'],
+                    'before': [{'name': '1.2.3'}],
+                    'after': [{'name': '1.2.1'}],
                     'notes': [],
                 },
                 {
                     'name': '1.2.1',
-                    'before': ['1.2.2'],
+                    'before': [{'name': '1.2.2'}],
                     'after': [],
                     'notes': [],
                 },
@@ -173,18 +173,18 @@ releases:
                 {
                     'name': '1.2.3',
                     'before': [],
-                    'after': ['1.2.2'],
+                    'after': [{'name': '1.2.2'}],
                     'notes': [],
                 },
                 {
                     'name': '1.2.2',
-                    'before': ['1.2.3'],
-                    'after': ['1.2.1'],
+                    'before': [{'name': '1.2.3'}],
+                    'after': [{'name': '1.2.1'}],
                     'notes': [],
                 },
                 {
                     'name': '1.2.1',
-                    'before': ['1.2.2'],
+                    'before': [{'name': '1.2.2'}],
                     'after': [],
                     'notes': [],
                 },
@@ -221,7 +221,7 @@ bird: dog
                 {
                     'name': '1.2.3',
                     'before': [],
-                    'after': ['1.2.2'],
+                    'after': [{'name': '1.2.2'}],
                     'notes': [
                         {
                             'id': '123',
@@ -237,13 +237,13 @@ bird: dog
                 },
                 {
                     'name': '1.2.2',
-                    'before': ['1.2.3'],
-                    'after': ['1.2.1'],
+                    'before': [{'name': '1.2.3'}],
+                    'after': [{'name': '1.2.1'}],
                     'notes': [],
                 },
                 {
                     'name': '1.2.1',
-                    'before': ['1.2.2'],
+                    'before': [{'name': '1.2.2'}],
                     'after': [],
                     'notes': [
                         {
@@ -268,24 +268,24 @@ bird: dog
         In this test, we will manufacture a release ancestry that looks like the graph
         below, and then show that ``seano`` correctly sorts the releases during a query.
 
-            *  v2.0
+            *  v2.0                 #1
             |\
-            | *  v1.3
+            | *  v1.3               #2
             | |\
-            | | *  v1.2b5
+            | | *  v1.2b5           #3
             | | *
             | | *
-            | * |  v1.2
+            | * |  v1.2             #4
             | |\|
             | | *
-            | | *  v1.2b1
+            | | *  v1.2b1           #5
             | |/
-            | *  v1.1
+            | *  v1.1               #6
             | *
-            | *  v1.1b2
+            | *  v1.1b2             #7
             |/
             *
-            *  v1.0
+            *  v1.0                 #8
         '''
         config = '''---
 current_version: "2.0"
@@ -323,49 +323,49 @@ releases:
                 {
                     'name': '2.0',
                     'before': [],
-                    'after': ['1.3', '1.0'], # TODO: This sort order is incorrect.
+                    'after': [{'name': '1.0'}, {'name': '1.3'}],
                     'notes': [],
                 },
                 {
                     'name': '1.3',
-                    'before': ['2.0'],
-                    'after': ['1.2b5', '1.2'], # TODO: This sort order is incorrect.
-                    'notes': [],
-                },
-                {
-                    'name': '1.0',
-                    'before': ['2.0', '1.1b2'],
-                    'after': [],
+                    'before': [{'name': '2.0'}],
+                    'after': [{'name': '1.2'}, {'name': '1.2b5'}],
                     'notes': [],
                 },
                 {
                     'name': '1.2b5',
-                    'before': ['1.3'],
-                    'after': ['1.2b1'],
-                    'notes': [],
-                },
-                {
-                    'name': '1.2b1',
-                    'before': ['1.2b5', '1.2'], # TODO: This sort order is incorrect.
-                    'after': ['1.1'],
-                    'notes': [],
-                },
-                {
-                    'name': '1.1',
-                    'before': ['1.2b1', '1.2'], # TODO: This sort order is incorrect.
-                    'after': ['1.1b2'],
-                    'notes': [],
-                },
-                {
-                    'name': '1.1b2',
-                    'before': ['1.1'],
-                    'after': ['1.0'],
+                    'before': [{'name': '1.3'}],
+                    'after': [{'name': '1.2b1'}],
                     'notes': [],
                 },
                 {
                     'name': '1.2',
-                    'before': ['1.3'],
-                    'after': ['1.2b1', '1.1'], # TODO: This sort order is incorrect.
+                    'before': [{'name': '1.3'}],
+                    'after': [{'name': '1.1'}, {'name': '1.2b1'}],
+                    'notes': [],
+                },
+                {
+                    'name': '1.2b1',
+                    'before': [{'name': '1.2'}, {'name': '1.2b5'}],
+                    'after': [{'name': '1.1'}],
+                    'notes': [],
+                },
+                {
+                    'name': '1.1',
+                    'before': [{'name': '1.2'}, {'name': '1.2b1'}],
+                    'after': [{'name': '1.1b2'}],
+                    'notes': [],
+                },
+                {
+                    'name': '1.1b2',
+                    'before': [{'name': '1.1'}],
+                    'after': [{'name': '1.0'}],
+                    'notes': [],
+                },
+                {
+                    'name': '1.0',
+                    'before': [{'name': '1.1b2'}, {'name': '2.0'}],
+                    'after': [],
                     'notes': [],
                 },
             ],
