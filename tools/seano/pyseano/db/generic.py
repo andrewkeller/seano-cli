@@ -5,6 +5,7 @@ Base class for the different kinds of seano databases
 """
 
 from pyseano.db.common import SeanoDataAggregator
+from pyseano.db.schema_upgrade import upgrade_root_object_schema
 from pyseano.utils import *
 import errno
 import glob
@@ -37,6 +38,7 @@ class GenericSeanoDatabase(object):
                         # in a yaml file in seano, let's not crash, either.
                         if not d:
                             continue
+                        d = upgrade_root_object_schema(d)
                         self.config.update(d)
             except IOError as e:
                 if is_required or e.errno != errno.ENOENT:
