@@ -21,7 +21,7 @@ class GitSeanoDatabase(GenericSeanoDatabase):
             cdup = coerce_to_str(subprocess.check_output(['git', 'rev-parse', '--show-cdup'], cwd=self.path,
                                                          stderr=subprocess.PIPE)).strip()
         except subprocess.CalledProcessError:
-            log.info('Unable to invoke git as expected')
+            log.debug('Unable to invoke git as expected')
             self.repo = None
         except FileNotFoundError:
             log.info('No database located at %s', self.path)
@@ -39,10 +39,15 @@ class GitSeanoDatabase(GenericSeanoDatabase):
         if not super(GitSeanoDatabase, self).is_valid(): return False
         # If there is no Git repository at all, then this cannot possibly be GitSeanoDatabase; bail.
         if not self.repo: return False
+        # If HEAD is not pointed to a real commit, then (almost) none our fancy Git logic will work.
+        if 0 != subprocess.call(['git', 'rev-parse', 'HEAD'],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.repo): return False
         # If any files inside the database are committed, then we consider this to be a valid GitSeanoDatabase:
-        if subprocess.check_output(['git', 'log', '-1', '--', self.path], cwd=self.repo): return True
+        if subprocess.check_output(['git', 'log', '-1', '--',
+                                    os.path.relpath(self.path, self.repo)], cwd=self.repo): return True
         # If any files inside the database are staged, then we consider this to be a valid GitSeanoDatabase:
-        if 0 != subprocess.call(['git', 'diff', '--cached', '--quiet', '--', self.path], cwd=self.repo): return True
+        if 0 != subprocess.call(['git', 'diff', '--cached', '--quiet', '--',
+                                 os.path.relpath(self.path, self.repo)], cwd=self.repo): return True
         # This may very well be a valid Seano database of some kind, but it cannot be a GitSeanoDatabase.
         log.info('It looks like no files exist where the database is supposed to be')
         return False
@@ -147,11 +152,11 @@ class GitSeanoDatabase(GenericSeanoDatabase):
             # Forward discovered notes into the note set:
             for filename, info in thing.get('notes', {}).items():
                 f = os.path.join(self.repo, filename)
-                s.import_automatic_note(path=f, uid=self.extract_uid_from_filename(f), **info)
+                s.import_note(path=f, uid=self.extract_uid_from_filename(f), **info)
 
             # Forward discovered releases into the note set:
             for name, info in thing.get('releases', {}).items():
-                s.import_automatic_release_info(name, **info)
+                s.import_release_info(name, **info)
 
         # Use the main database config file (seano-config.yaml) as a foundation for the query result structure.
         # Overwrite the entire `releases` member; the SeanoDataAggregator object contains all the juicy metadata contained
@@ -324,7 +329,6 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                     ['git', 'log', '--decorate=full', '--name-status', '-M100%', '--pretty=format:%H %P%d'],
                     cwd=self.repo, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     bufsize=4096, # hopefully large enough to capture any possible stderr without blocking
-                    close_fds=True,
                 )
                 p.stdin.close()
 
@@ -350,6 +354,7 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                         accumulator = []
                     if line: # ignore empty lines
                         accumulator.append(line)
+                yield accumulator
 
             ws_split = re.compile(r'(\s+)').split
             ref_split = re.compile(r'(?:HEAD \->|tags?:|\(|\)|,|\s)+').split
@@ -551,6 +556,7 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                             fname = dirsep_patch_func(fname)
                         n = notes.get(fname, dict(path=fname))
                         n['delete'] = True
+                        notes[fname] = n
                     continue
 
             # Do not ever report deleted notes:

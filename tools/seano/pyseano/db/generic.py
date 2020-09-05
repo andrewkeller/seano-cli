@@ -32,6 +32,11 @@ class GenericSeanoDatabase(object):
             try:
                 with open(cfg, "r") as f:
                     for d in yaml.load_all(f, Loader=yaml.FullLoader):
+                        # An empty section in yaml yields None here.
+                        # Although it's weird (wrong?) to have an empty section
+                        # in a yaml file in seano, let's not crash, either.
+                        if not d:
+                            continue
                         self.config.update(d)
             except IOError as e:
                 if is_required or e.errno != errno.ENOENT:
@@ -63,8 +68,22 @@ class GenericSeanoDatabase(object):
         return os.path.join(self.db_objs, fs_uid)
 
     def extract_uid_from_filename(self, filename):
-        # IMPROVE: This algorithm could use some santity checking to make sure it's returning a sane result
-        return filename[-38:-36] + filename[-35:-5]
+        '''
+        The uid of any note file is:
+
+        1. its relative path from inside ``self.db_objs``
+        2. with the file extension hacked off the end
+        3. and all slashes removed
+
+        Invoking this function with any file that is not a "proper" note file for the
+        seano database currently referenced by this database object results in undefined
+        behavior.
+        '''
+        result = os.path.relpath(filename, self.db_objs) # [1]
+        result = os.path.splitext(result)[0] # [2]
+        result = result.replace('/', '') # [3]
+        result = result.replace('\\', '') # [3]
+        return result
 
     def get_seano_note_template_contents(self):
         # The entire note template file may be overwritten on a per-database basis:
@@ -141,7 +160,7 @@ class GenericSeanoDatabase(object):
             for f in filenames:
                 if f.endswith(SEANO_NOTE_EXTENSION):
                     f = os.path.join(root, f)
-                    s.import_automatic_note(path=f, uid=self.extract_uid_from_filename(f))
+                    s.import_note(path=f, uid=self.extract_uid_from_filename(f))
 
         # Use the main database config file (seano-config.yaml) as a foundation for the query result structure.
         # Overwrite the entire `releases` member; the SeanoDataAggregator object contains all the juicy metadata contained

@@ -34,11 +34,20 @@ class SeanoDataAggregator(object):
         self.load_manual_releases(config.get('releases', None) or [])
 
 
-    def import_automatic_release_info(self, name, **automatic_attributes):
+    def import_release_info(self, name, **automatic_attributes):
         for k, v in automatic_attributes.items():
             self.release_setattr(name, k, True, v)
 
-    def import_automatic_note(self, path, uid, **automatic_attributes):
+    def import_note(self, path, uid, **automatic_attributes):
+        if not automatic_attributes:
+            # note_setattr() (below) invokes get_note() under-the-hood, which means that
+            # simply setting an automatic attribute will load the note from disk first.
+            # When no automatic attributes exist, the loop doesn't run.  In this case,
+            # manually invoke get_note(), discarding the result, to ensure that the note
+            # file was loaded, which is the whole point of this function.
+            self.get_note(path, uid)
+            return
+
         for k, v in automatic_attributes.items():
             self.note_setattr(path, uid, k, True, v)
 
@@ -241,7 +250,7 @@ class SeanoDataAggregator(object):
         if key not in ['notes']:
             # ^^ some keys bypass the "accepts auto" concept, in favor of guaranteeing data is never lost.
             # The penalty, though, is that you can't *remove* values automatically gathered by simply
-            # "overriding" them in seano-config.yaml.
+            # "overriding" the parent object in seano-config.yaml.
 
             if is_auto and not obj.get('accepts_auto_' + key, True):
                 # New attribute to set is auto, and existing attribute already set is manual.
