@@ -1,5 +1,5 @@
 """
-pyseano/db/note_set.py
+pyseano/db/common.py
 
 Organizes a set of release notes, does some sanity checking, and serializes as Json
 """
@@ -12,7 +12,7 @@ import yaml
 log = logging.getLogger(__name__)
 
 
-class NoteSet(object):
+class SeanoDataAggregator(object):
     def __init__(self, config):
         self.releases = {}  # Releases *do not* contain notes (unless hard-coded in seano-config.yaml)
         self.notes = {}     # Notes mention releases *by name*
