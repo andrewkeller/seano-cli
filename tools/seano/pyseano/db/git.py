@@ -4,7 +4,7 @@ pyseano/db/git/git.py
 Reads a git-backed seano database.
 """
 
-from pyseano.db.note_set import NoteSet
+from pyseano.db.common import SeanoDataAggregator
 from pyseano.utils import *
 from pyseano.db.generic import GenericSeanoDatabase
 import os
@@ -141,7 +141,7 @@ class GitSeanoDatabase(GenericSeanoDatabase):
 
     def query(self):
         # ABK: The beginning and end of this function should be kept somewhat in sync with the copy in generic.py
-        s = NoteSet(self.config)
+        s = SeanoDataAggregator(self.config)
         for thing in self.scan_git_seano_db(False):
 
             # Forward discovered notes into the note set:
@@ -154,7 +154,7 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                 s.import_automatic_release_info(name, **info)
 
         # Use the main database config file (seano-config.yaml) as a foundation for the query result structure.
-        # Overwrite the entire `releases` member; the NoteSet object contains all the juicy metadata contained
+        # Overwrite the entire `releases` member; the SeanoDataAggregator object contains all the juicy metadata contained
         # in the existing `releases` member in seano-config.yaml, so we're not losing any data by overwriting.
         result = dict(self.config)
         result['releases'] = s.dump()

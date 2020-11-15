@@ -4,7 +4,7 @@ pyseano/db/generic.py
 Base class for the different kinds of seano databases
 """
 
-from pyseano.db.note_set import NoteSet
+from pyseano.db.common import SeanoDataAggregator
 from pyseano.utils import *
 import errno
 import glob
@@ -139,7 +139,7 @@ class GenericSeanoDatabase(object):
         #
         # Note, though, that this implementation doesn't scale well because we are unable to bail early, because there
         # is no sense of time without a repository.  This implementation is basically a glorified demo.
-        s = NoteSet(self.config)
+        s = SeanoDataAggregator(self.config)
         for root, directories, filenames in os.walk(self.db_objs):
             for f in filenames:
                 if f.endswith(SEANO_NOTE_EXTENSION):
@@ -147,7 +147,7 @@ class GenericSeanoDatabase(object):
                     s.import_automatic_note(path=f, uid=self.extract_uid_from_filename(f))
 
         # Use the main database config file (seano-config.yaml) as a foundation for the query result structure.
-        # Overwrite the entire `releases` member; the NoteSet object contains all the juicy metadata contained
+        # Overwrite the entire `releases` member; the SeanoDataAggregator object contains all the juicy metadata contained
         # in the existing `releases` member in seano-config.yaml, so we're not losing any data by overwriting.
         result = dict(self.config)
         result['releases'] = s.dump()
