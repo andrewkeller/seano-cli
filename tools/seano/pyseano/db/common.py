@@ -87,14 +87,74 @@ class SeanoDataAggregator(object):
 
 
     def dump(self):
-        # Start by using the releases dictionary as a template:
+        # Clone the notes structure, so we can make changes without making this method non-re-entrant-safe:
+        note_dicts = structure_deep_copy(self.notes)
+
+        # Also clone the releases structure, for the same reason:
         release_dicts = structure_deep_copy(self.releases)
 
-        # Inject each note into each release:
-        for note in self.notes.values():
+        # Doubly-link the before and after lists on each release:
+        # Remember that these are associative arrays (lists of dictionaries), not lists of strings.
+        def ancestry_mirroring_key_filter(key):
+            # When doubly-linking release ancestries, only mirror these keys across either side of the link:
+            return key in ['delete']
 
-            # Clone so we can make edits:
-            note = structure_deep_copy(note)
+        for name, info in release_dicts.items():
+            for before in info.get('before', []):
+                ancestry_data = structure_deep_copy(before, key_filter=ancestry_mirroring_key_filter)
+                ancestry_data['name'] = name
+                self.assocary_generic_setattr(release_dicts[before['name']],
+                                              "release_dicts['%s']" % (before['name'],),
+                                              'after', True, [ancestry_data], 'name')
+            for after in info.get('after', []):
+                ancestry_data = structure_deep_copy(after, key_filter=ancestry_mirroring_key_filter)
+                ancestry_data['name'] = name
+                self.assocary_generic_setattr(release_dicts[after['name']],
+                                              "release_dicts['%s']" % (after['name'],),
+                                              'before', True, [ancestry_data], 'name')
+
+        # Now that all release ancestry links marked for deletion have been marked for deletion on both ends,
+        # do another sweep through the entire ancestry graph, deleting ancestry links marked for deletion:
+        for info in release_dicts.values():
+            info['before'] = [x for x in info.get('before', []) if not x.get('delete', False)]
+            info['after'] = [x for x in info.get('after', []) if not x.get('delete', False)]
+
+        # Calculate backstory forwarding for each release:
+        backstory_forwards = {}
+
+        def list_lineage(release_name):
+            '''Lists all parents of the given release, without risk of an infinite loop'''
+            todo = [release_name]
+            result = []
+            while todo:
+                todo, x = todo[1:], todo[0]
+                for y in release_dicts[x].get('after') or []:
+                    y = y['name']
+                    if y not in result and y not in todo:
+                        todo.append(y)
+                result.append(x)
+            return result
+
+        for release in release_dicts.values():
+            all_after = release.get('after') or []
+            # Order is important here.  We want to paint all ancestors reachable only by a backstory
+            # ancestry link, and then un-paint all ancestors reachable by any non-backstory ancestry
+            # link -- in that order.  When painting and un-painting has completed, we will then have
+            # a literal map of when we need to forward notes.  (search for usages of backstory_forwards
+            # to see when this knowledge is used)
+            bs_after = [x for x in all_after if x.get('is-backstory', False)]
+            gm_after = [x for x in all_after if not x.get('is-backstory', False)]
+            for after in bs_after:
+                for x in list_lineage(after['name']):
+                    backstory_forwards[x] = backstory_forwards.get(x, set()) | set([release['name']])
+            for after in gm_after:
+                for x in list_lineage(after['name']):
+                    backstory_forwards[x] = backstory_forwards.get(x, set()) - set([release['name']])
+
+        log.debug('Backstory forwards: %s', backstory_forwards)
+
+        # Inject each note into each release:
+        for note in note_dicts.values():
 
             # Declare notes to be part of the HEAD release when no release is specified:
             # (this is important for non-Git-backed databases; when the release is not
@@ -107,21 +167,19 @@ class SeanoDataAggregator(object):
                 if isinstance(v, set):
                     note[k] = sorted(list(v))
 
-            # Append to each applicable release:
+            # Append this note to each release when this change was first released:
             for r in note['releases']:
-                release_dicts[r]['notes'] = (release_dicts[r].get('notes', None) or []) + [note]
+                # Add to releases where this note was created:
+                release_dicts[r]['notes'] = (release_dicts[r].get('notes') or []) + [note]
 
-        # Doubly-link the before and after lists on each release:
-        # Remember that these are associative arrays (lists of dictionaries), not lists of strings.
-        for name, info in release_dicts.items():
-            for before in info.get('before', []):
-                self.assocary_generic_setattr(release_dicts[before['name']],
-                                              "release_dicts['%s']" % (before['name'],),
-                                              'after', True, [{'name': name}], 'name')
-            for after in info.get('after', []):
-                self.assocary_generic_setattr(release_dicts[after['name']],
-                                              "release_dicts['%s']" % (after['name'],),
-                                              'before', True, [{'name': name}], 'name')
+            # Append this note to each release that is a termination of a relevant backstory:
+            note = dict(note) # Copy so that we can make changes
+            note['is-copied-from-backstory'] = True
+            backstory_targets = set()
+            for r in note['releases']:
+                backstory_targets = backstory_targets | backstory_forwards.get(r, set())
+            for p in backstory_targets:
+                release_dicts[p]['notes'] = (release_dicts[p].get('notes') or []) + [note]
 
         # Sort special keys in each release we care about:
         for name, info in release_dicts.items():
