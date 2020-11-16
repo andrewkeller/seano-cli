@@ -79,8 +79,12 @@ graph in Git, and you get a big fat Json file containing::
       "releases" : [           # sorted list of releases
         {                       # a single release
           "name" : "1.2.3",      # tag name
-          "after" : ["1.2.2"],   # list of immediate ancestor tags
-          "before" : ["1.2.4"],  # list of immediate descendant tags
+          "after" : [            # list of immediate ancestors
+            {"name": "1.2.2"},    # an ancestry link
+          ],
+          "before" : [           # list of immediate descendants
+            {"name": "1.2.4"},    # an ancestry link
+          ],
           "notes" : [            # sorted list of notes
             {                     # a single note
               "id" : "123abc",     # the id of this note in seano
@@ -168,18 +172,23 @@ Notes have these keys automatically set on them:
 
 * ``commits``: list of commit IDs that supply this note *(supported SCMs)*
 * ``id``: the ``seano`` note ID
+* ``is-copied-from-backstory``: whether or not the note was copied from a backstory (see :ref:`seano-backstory`)
 * ``releases``: list of release names in which this note was released *(supported SCMs)*
     * In unsupported SCMs, if you don't set this key, the note will appear in the ``HEAD`` release
 * ``refs``: unused; reserved for future use
 
 Releases have these keys automatically set on them:
 
-* ``after``: list of names of releases that are immediate ancestors of this release *(supported SCMs)*
-    * In unsupported SCMs, if you do not set either ``before`` or ``after`` on a release, ``seano`` may get the release
-      order incorrect
-* ``before``: list of names of releases that are immediate descendants of this release *(supported SCMs)*
-    * In unsupported SCMs, if you do not set either ``before`` or ``after`` on a release, ``seano`` may get the release
-      order incorrect
+* ``after``: list of dictionaries describing immediate ancestor releases *(supported SCMs)*
+
+  * In unsupported SCMs, if you do not set either ``before`` or ``after`` on a release, ``seano`` may get the release
+    order incorrect
+
+* ``before``: list of dictionaries describing immediate descendant releases *(supported SCMs)*
+
+  * In unsupported SCMs, if you do not set either ``before`` or ``after`` on a release, ``seano`` may get the release
+    order incorrect
+
 * ``commit``: the commit ID of this release *(supported SCMs)*
 * ``name``: name of this release (not localized)
 * ``notes``: list of note dictionaries
@@ -197,8 +206,10 @@ The following keys are functional in ``seano-config.yaml``:
 * ``current_version``: the current version of the project
     * Always required (``seano`` does not want to be responsible for deriving this)
     * In Zarf projects, this is automatically supplied via the config annex
-* ``parent_versions``: list of names of releases that are immediate ancestors of HEAD *(supported SCMs)*
-    * In unsupported SCMs, you must set this
+* ``parent_versions``: list of dictionaries describing immediate ancestors of HEAD *(supported SCMs)*
+
+  * In unsupported SCMs, you must set this
+
 * ``releases``: list of release dictionaries
     * In unsupported SCMs, this is where you manually set keys on releases
 * ``seano_note_template_contents``: big fat string value to use as the template when creating a new note
@@ -218,6 +229,111 @@ automated/integrated with Zarf/Sphinx in the future.  In the meantime, feel free
     $ seano query -h
 
 
+.. _seano-backstory:
+
+Backstories
+-----------
+
+In modern development, release ancestries are often conceptually non-linear.  We do a pretty good job denying it, with
+comments like *"long-lived betas are an anti-pattern"*, and *"why is it so hard to establish confidence of the
+stability of a release"*, and *"if you'd use feature flags, you wouldn't have this problem"*, but the reality is, even
+in a perfect world with unicorns, rainbows, and feature flags, some development still take more than one release to
+finish.  And when you finally do finish, you now have a trail of "extra" releases behind you that, ideally, you'd like
+to prune, because they don't tell the story you want to tell — but you don't want to delete them, because they were
+actually real releases, and for Member Care to support them, we need to have at least some memory of what they
+contained.
+
+Enter *backstories*.  In ``seano``, a backstory is a subgraph of the release ancestry graph that is deemed unhelpful to
+be displayed by default to public customers.  By convention, our internal tools, such as our internal Release Notes
+archives, typically display all releases, whereas our public-facing tools, such as published Release Notes, typically
+hide backstories.
+
+When a backstory is defined, all notes for all releases within the backstory are automatically copied into the notes
+list of the release that merges the backstory.  The copies each automatically have a new member named
+``is-copied-from-backstory`` set on them, with a value of ``true``.  The originals of the notes do not have
+``is-copied-from-backstory`` set on them at all.
+
+When iterating over the Json in a ``seano`` query dump file, you'll find that the releases list includes all releases
+*(including backstory releases)*, and the notes lists on every release include all notes *(including backstory notes)*.
+Sure, you could display everything — but that can be confusingly repetitive to most readers.  Usually, you want to
+filter one or the other out:
+
+* If you are displaying backstories, then you usually want to display all releases, but *filter out backstory notes*
+
+  * The easiest way to identify whether or not a note is a backstory note is to see if ``is-copied-from-backstory``
+    both exists *and* is set to ``true``
+
+* If you are hiding backstories, then you usually want to display all notes, but *filter out backstory releases*
+
+  * The easiest way to identify whether or not a release is a backstory release is to invoke
+    :py:func:`zarf.support.seano.views.shared.schema_painting.seano_paint_backstory_releases` on your releases list, and
+    then on a release, see if ``is-backstory`` is set to ``true``
+
+Presently, backstories can only be configured manually; they are never auto-deduced from Git.  Long term, we hope to
+add some automation here.  For now, you can manually define backstories in your project's ``seano-config.yaml`` file.
+Say, for example, in the scenario below, you want the granular history of the ``1.4`` and ``1.6`` releases to be
+backstories.  Here's how to do it:
+
+.. code-block:: text
+
+                   Auto-deduced by
+                   mining the commit    Must be manually typed
+                   graph (no need       into seano-config.yaml
+   Commit graph    to type in)          to configure backstories
+
+                   releases:            releases:
+   *  v1.6         - name: 1.6          - name: 1.6
+   |\                after:               after:
+   | |               - name: 1.0
+   | |               - name: 1.5          - name: 1.5
+   | |                                      is-backstory: true
+   | |
+   | * v1.5        - name: 1.5
+   | |               after:
+   | |               - name: 1.4
+   | |
+   | *  v1.4       - name: 1.4          - name: 1.4
+   | |\              after:               after:
+   | | |             - name: 1.1
+   | | |             - name: 1.3          - name: 1.3
+   | | |                                    is-backstory: true
+   | | |
+   | | * v1.3      - name: 1.3
+   | | |             after:
+   | | |             - name: 1.2
+   | | |
+   | | * v1.2      - name: 1.2
+   | | |             after:
+   | | |             - name: 1.1
+   | |/
+   | *  v1.1       - name: 1.1
+   | |               after: 1.0
+   |/
+   *  v1.0         - name: 1.0
+
+In the above scenario, the entire release ancestry is auto-deduced from tags in Git, which means we don't have to
+declare any releases or any release ancestries.  However, in order to set ``is-backstory`` to ``true`` on any
+particular release ancestry link, we must define the release, and then define the ancestry link.
+
+``is-backstory`` can only be set on the *descendant side* of an ancestry link (i.e., the ``after`` list).  Setting
+``is-backstory`` on the ancestor side of an ancestry link has no effect.
+
+The graph theory explanation of what the above configuration says is the following:
+
+* The backstory of ``1.6`` is ``1.5`` and all ancestors thereof, *not including* ``1.0`` and all ancestors thereof
+* The backstory of ``1.4`` is ``1.3`` and all ancestors thereof, *not including* ``1.1`` and all ancestors thereof
+
+In practice, what ends up happening is:
+
+* ``1.0`` contains notes for ``1.0``
+* ``1.1`` contains notes for ``1.1``
+* ``1.2`` contains notes for ``1.2``
+* ``1.3`` contains notes for ``1.3``
+* ``1.4`` contains notes for ``1.2``, ``1.3``, and ``1.4``
+* ``1.5`` contains notes for ``1.5``
+* ``1.6`` contains notes for ``1.1``, ``1.2``, ``1.3``, ``1.4``, ``1.5``, and ``1.6``
+
+
 Onboarding old data
 -------------------
 
@@ -232,16 +348,17 @@ To import old notes into an existing ``seano`` database:
    favorite text editor, and in the ``releases`` list, make sure a release is defined with the name of the release
    you're importing.  The list looks something like this:
 
-    .. code-block:: yaml
+   .. code-block:: yaml
 
-        releases:
-        - name:  1.2.3
-          after: 1.2.2  # `after` is only needed if tags are missing
-        - name:  1.2.2
-          after:
-          - 1.2.1   # `after` can optionally be a list
-          - 1.2.0
-        # ... etc
+      releases:
+      - name:  1.2.3
+        after: 1.2.2    # `after` can optionally be a single string, or a list of single strings
+      - name:  1.2.2
+        after:          # `after` is only needed if tags are missing
+        - name: 1.2.0
+        - name: 1.2.1   # example of full schema here
+          is-backstory: true
+      # ... etc
 
 2. Run ``seano new -n <N>``, where ``<N>`` is the number of release notes you're adding for this release.  By
    creating ``N`` new notes all at once and editing them in ascending order of filename, you preserve the original
@@ -270,6 +387,13 @@ To display data, take a peek at the :doc:`seanoViews`.
 Known bugs and other sharp edges
 --------------------------------
 
+Git scanner does not auto-detect backstories
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+It would be nice if support for :ref:`seano-backstory` included automatically identifying backstories from commit graph
+topology, or even tag names.
+
+
 ``seano edit`` does not respect overridden commit IDs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -295,11 +419,13 @@ For now, when you use ``seano edit <commit>``, understand that the ``<commit>`` 
 to Git's knowledge, and doesn't account for any overrides inside the note.  Iterate as necessary.
 
 
-Deleted releases cannot have ``before`` or ``after`` set on them
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Deleted releases cannot be referenced in release ancestries
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-I choose to call this one a bug.  In a Git-backed ``seano`` database, if you want to tell ``seano`` to skip (ignore) a
-tag in Git, you can open up ``seano-config.yaml``, and add a section like this:
+This is more of a sharp edge than a bug.
+
+For context, in a Git-backed ``seano`` database, if you want to tell ``seano`` to skip (ignore) a tag in Git, you can
+open up ``seano-config.yaml``, and add a section like this:
 
 .. code-block:: yaml
 
@@ -312,53 +438,30 @@ the Git scanner runs, it ignores 1.2.3 outright (it pretends it doesn't exist). 
 links properly hook up the releases on either side of 1.2.3, and 1.2.3 never shows up in any query.  It's like 1.2.3
 doesn't even exist.
 
-Here's the problem.  Suppose you have some manually defined releases adjacent to that deleted release.  For the sake
-of explanation, let's say that the releases you are manually defining are betas, and they don't have tags, and you
-choose to manually define the releases in ``seano-config.yaml``.  (There is an argument that betas should be tagged,
-but that doesn't help my point here)  Here is, one would think, a perfectly working set of release definitions that
-should result in a sensible outcome:
+This sharp edge actually has nothing to do with Git -- it's related to the logic that automatically validates and
+doubly-links the ancestry graph at query time.  Suppose you have some manually defined releases, and you suddenly
+decide to delete a release.  What you *cannot do* is simply set ``delete`` to ``true`` on that release, and expect
+``seano`` to hook up the dangling ancestry links like it does for a deleted Git tag.
 
-.. code-block:: yaml
+The practical fallout here is that if you want to delete a release that is involved in some manual ancestry
+declarations, you must also reroute those ancestries around the deleted release.  Here's an example:
 
-    releases:
-    - name: 1.2.4       # this release is auto-detected via Git
-      after: 1.2.4b4    # override `after` so that it's not automatically set to 1.2.2
-
-    - name: 1.2.4b4     # manually defined but ancestry is automatic from adjacent releases
-
-    - name: 1.2.3       # this release is auto-detected via Git
-      before: 1.2.4b4   # deleted releases have no ancestry by default
-      after: 1.2.3b5    # deleted releases have no ancestry by default
-      delete: True      # for reason X, never include this release in any query
-
-    - name: 1.2.3b5     # manually defined, but ancestry is automatic from adjacent releases
-
-    - name: 1.2.2       # this release is auto-detected via Git
-      before: 1.2.3b5   # override `before` so that it's not automatically set to 1.2.4
-
-Okay, that configuration *should work*...  Algorithmically, it's fairly straight-forward to drop 1.2.3 out of the
-ancestry graph, and splice the dangling before/after links together.  But ``seano`` doesn't know how to do that right
-now, and explodes wildly when you run a query.
-
-For now, if you mark a release as deleted, you cannot override ``before`` or ``after`` on that release.  Here's what
-the above example looks like, following that advise:
-
-.. code-block:: yaml
+.. code-block:: diff
 
     releases:
-    - name: 1.2.4       # this release is auto-detected via Git
-      after: 1.2.4b4    # override `after` so that it's not automatically set to 1.2.2
+    - name: 1.2.4
+      after: 1.2.3
 
-    - name: 1.2.4b4     # manually defined but ancestry is partially automatic from adjacent releases
-      after: 1.2.3b5    # manually bypass 1.2.3 and link to 1.2.3b5
+    - name: 1.2.3
+   -  after: 1.2.2    # this causes seano to explode at query time
+   +  after: 1.2.1    # you must reroute any manually defined
+   +                  # ancestries around the deleted release
 
-    - name: 1.2.3       # this release is auto-detected via Git
-      delete: True      # for reason X, never include this release in any query
+    - name: 1.2.2
+   -  after: 1.2.1    # this data is useless on a deleted release
+   +  delete: True    # primary goal: delete this release
 
-    - name: 1.2.3b5     # manually defined, but ancestry is automatic from adjacent releases
-
-    - name: 1.2.2       # this release is auto-detected via Git
-      before: 1.2.3b5   # override `before` so that it's not automatically set to 1.2.4
+    - name: 1.2.1
 
 
 Git scanner has trouble with conflicting reversed cherry-picks

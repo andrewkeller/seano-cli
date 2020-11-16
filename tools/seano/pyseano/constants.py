@@ -61,13 +61,20 @@ releases:
 
 # Even if you track this project in Git, you may find that in some obscure
 # cases you still need to whack seano with a stick because it got something
-# wrong.  The most common example of such a scenario is when you wish to have
-# a full and accurate release history of the entire life of the project, but
-# some of the ancient releases use weird tag names that seano doesn't auto-
-# detect, or maybe they pre-date the repository itself.  Whatever the reason,
-# here's how you manually define ancestry relationships between releases:
+# wrong.  One of the common ways this happens is when Git detects a tag that
+# you don't want to be a release.  Here's how to burn a tag that exists in
+# your repository, without actually deleting the tag in Git:
 #
-#   == seano config syntax ==        == example commit graph ==
+#   releases:
+#
+#   - name: 1.2.3
+#     delete: True # This tag does not represent a release we want
+#
+# Another thing that can go wrong is when you want to represent releases that
+# predate the repository.  Here's how you can manually create a release
+# ancestry graph beyond what Git can mine:
+#
+#   == seano config syntax ==        == analogous to this commit graph ==
 #
 #   releases:
 #
@@ -79,6 +86,7 @@ releases:
 #     after:                        |\
 #     - name: 1.1.0                 | |
 #     - name: 1.0.5                 | |
+#       is-backstory: true          | |
 #                                   | |
 #   - name:  1.0.5                  | *  Fix bug (tags: v1.0.5)
 #     after:                        | |
@@ -91,41 +99,45 @@ releases:
 #   - name: 1.0.4                   *  Implement foobar (tags: v1.0.4)
 #     ... you get the picture       |
 #
-# Note that any use of before/after overrides seano's automatic logic when a
-# Git repository exists.  If you're using a Git repository but want to
-# manually insert a release that doesn't otherwise exist, here's how you can
-# do it:
+# Manual definitions of release ancestry are overlaid on top of ancestry
+# auto-detected by the underlying repository.  This is normally handy, but can
+# cause a little trouble when you need to manually insert a release that can't
+# be tagged (we weren't as rigorous with our committing habits a decade ago).
+# Here's how to manually insert a release in between two existing tags:
 #
 #   == seano config syntax ==        == example commit graph ==
 #
 #   releases:
 #
-#   - name:  1.1.0                  *  Final touches (tags: v1.1.0)
+#   - name: 2.1                     *  Final touches (tags: v2.1)
 #     after:                        |
-#     - name: 1.1.0b1               |
+#     - name: 2.0                   |
+#     - name: 1.5                   |
+#       delete: True                |
 #                                   |
-#   - name:  1.1.0b1                *  Public beta (no tag!)
+#   - name: 2.0                     |  2.0 release, squashed into oblivion
+#     after:                        |    (no commit to tag!)
+#     - name: 1.5                   |
 #                                   |
-#   - name:   1.0.0                 *  Implement foobar (tags: v1.0.0)
-#     before:                       |
-#     - name: 1.1.0b1               |
+#   # (no need to declare 1.5)      *  Implement foobar (tags: v1.5)
 #
 # There's a lot to unpack in the above example.  Here's what's going on:
-# * Even though 1.1.0 is auto-detected via Git, we're manually declaring it so
-#   that we can override a member.
-# * By setting `after` on 1.1.0, we're switching ONLY the `after` list on
-#   1.1.0 to full manual, and providing the full list (in this case, a single
-#   value).  The `before` list on 1.1.0 remains automatically deduced via Git.
-# * 1.1.0b1 is not auto-detected via Git, because there is no tag.  Declare it
-#   so that it exists.
-# * Even though 1.0.0 is auto-detected via Git, we're manually declaring it so
-#   that we can override a member.
-# * By setting `before` on 1.0.0, we're switching ONLY the `before` list on
-#   1.0.0 to full manual, and providing the full list (in this case, a single
-#   value).  The `after` list on 1.0.0 remains automatically deduced via Git.
-# * Even though 1.1.0b1 is a manually declared release, its `before` and
-#   `after` lists are automatic.  In this case, `before` is automatically
-#   1.1.0, and `after` is automatically 1.0.0.
+# * Even though 2.1 is auto-detected via Git, we're manually declaring it so
+#   that we can edit its ancestry.
+# * Declare that 2.1 is after 2.0.  Git wouldn't have auto-detected this, so
+#   this is new knowledge.
+# * Git auto-detects that 2.1 comes after 1.5 (because it's the next tag in
+#   the repository), so it adds a corresponding ancestry link.  We don't want
+#   that ancestry link at all, so mark it for deletion.
+# * 2.0 is not auto-detected via Git because there is no tag.  Declare it, so
+#   that it exists.
+# * We already manually declared that 2.1 comes after 2.0.  Now, we must
+#   declare that 2.0 comes after 1.5.
+# * We don't need to declare that 1.5 is before 2.0, because we already
+#   declared that 2.0 is after 1.5, and seano will automatically doubly-link
+#   all ancestries at query time.
+# * We don't need to delete the link from 1.5 to 2.1, because we already
+#   marked the link for deletion on the other end of the link.
 '''
 
 SEANO_DB_SUBDIR = 'v1'
