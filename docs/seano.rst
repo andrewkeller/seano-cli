@@ -43,7 +43,7 @@ requirements of such a system:
 2. Notes are mutable
 3. Notes are deletable
 4. Notes storage should not optimize for merge conflicts
-5. Cherry-picking a commit should also pull over associated notes witout requiring fixups
+5. Cherry-picking a commit should also pull over associated notes without requiring fixups
 6. Supports submodules
 7. Supports output types we know we need: reStructuredText, HTML, Confluence-flavored HTML, and RTF
 
@@ -174,7 +174,9 @@ Notes have these keys automatically set on them:
 * ``id``: the ``seano`` note ID
 * ``is-copied-from-backstory``: whether or not the note was copied from a backstory (see :ref:`seano-backstory`)
 * ``releases``: list of release names in which this note was released *(supported SCMs)*
-    * In unsupported SCMs, if you don't set this key, the note will appear in the ``HEAD`` release
+
+  * In unsupported SCMs, if you don't set this key, the note will appear in the ``HEAD`` release
+
 * ``refs``: unused; reserved for future use
 
 Releases have these keys automatically set on them:
@@ -204,18 +206,26 @@ The following keys are functional in ``seano-config.yaml``:
     For more information on the ``seano`` config annex concept, search the code base for ``--config-annex``
 
 * ``current_version``: the current version of the project
-    * Always required (``seano`` does not want to be responsible for deriving this)
-    * In Zarf projects, this is automatically supplied via the config annex
+
+  * Always required (``seano`` does not want to be responsible for deriving this)
+  * In Zarf projects, this is automatically supplied via the config annex
+
 * ``parent_versions``: list of dictionaries describing immediate ancestors of HEAD *(supported SCMs)*
 
   * In unsupported SCMs, you must set this
 
 * ``releases``: list of release dictionaries
-    * In unsupported SCMs, this is where you manually set keys on releases
+
+  * In unsupported SCMs, this is where you manually set keys on releases
+
 * ``seano_note_template_contents``: big fat string value to use as the template when creating a new note
-    * When not set, a default value is used that contains all keys used by the :doc:`seanoViews`
-* ``seano_note_template_replacements``: dictionary of search-and-replace pairs to run on the note template before a human sees it for editing
-    * The intended purpose is to let projects augment the template without fully replacing the whole thing
+
+  * When not set, a default value is used that contains all keys used by the :doc:`seanoViews`
+
+* ``seano_note_template_replacements``: dictionary of search-and-replace pairs to run on the note template before a
+  human sees it for editing
+
+  * The intended purpose is to let projects augment the template without fully replacing the whole thing
 
 Feel free to save any other key in ``seano``.
 
