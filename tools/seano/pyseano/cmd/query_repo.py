@@ -19,6 +19,9 @@ def query_release_notes(db, out, **db_kwargs):
     data = open_seano_database(db, **db_kwargs).query()
     data = json.dumps(data, sort_keys=True)
 
+    if sys.hexversion < 0x3000000:
+        data = data.encode('utf-8')
+
     if out in ['-']:
         print(data)
         return

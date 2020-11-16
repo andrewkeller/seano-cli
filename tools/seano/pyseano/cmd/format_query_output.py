@@ -46,6 +46,9 @@ def format_query_output(src, format, out):
 
     outdata = format_functions[format](srcdata)
 
+    if sys.hexversion < 0x3000000:
+        outdata = outdata.encode('utf-8')
+
     if out in ['-']:
         sys.stdout.write(outdata)
         return
