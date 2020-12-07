@@ -93,25 +93,72 @@ class SeanoDataAggregator(object):
         # Also clone the releases structure, for the same reason:
         release_dicts = structure_deep_copy(self.releases)
 
-        # Doubly-link the before and after lists on each release:
-        # Remember that these are associative arrays (lists of dictionaries), not lists of strings.
-        def ancestry_mirroring_key_filter(key):
-            # When doubly-linking release ancestries, only mirror these keys across either side of the link:
-            return key in ['delete']
+        # In the course of the dump() method, we patch the output in ways that both (a) require the release
+        # ancestry graph to be properly doubly-linked, and (b) introduces new data that forces us to
+        # re-doubly-link the ancestry graph.  Thus, this process has to be reusable.
+        def doubly_link():
 
-        for name, info in release_dicts.items():
-            for before in info.get('before', []):
-                ancestry_data = structure_deep_copy(before, key_filter=ancestry_mirroring_key_filter)
-                ancestry_data['name'] = name
-                self.assocary_generic_setattr(release_dicts[before['name']],
+            # Doubly-link the before and after lists on each release:
+            # Remember that these are associative arrays (lists of dictionaries), not lists of strings.
+            def ancestry_mirroring_key_filter(key):
+                # When doubly-linking release ancestries, only mirror these keys across either side of the link:
+                return key in ['delete']
+
+            for name, info in release_dicts.items():
+                for before in info.get('before', []):
+                    ancestry_data = structure_deep_copy(before, key_filter=ancestry_mirroring_key_filter)
+                    ancestry_data['name'] = name
+                    self.assocary_generic_setattr(release_dicts[before['name']],
+                                                  "release_dicts['%s']" % (before['name'],),
+                                                  'after', True, [ancestry_data], 'name')
+                for after in info.get('after', []):
+                    ancestry_data = structure_deep_copy(after, key_filter=ancestry_mirroring_key_filter)
+                    ancestry_data['name'] = name
+                    self.assocary_generic_setattr(release_dicts[after['name']],
+                                                  "release_dicts['%s']" % (after['name'],),
+                                                  'before', True, [ancestry_data], 'name')
+        doubly_link()
+
+        # Auto-create backstories when `auto-wrap-in-backstory` is set on a release:
+        def auto_create_backstories_for_auto_wrapped_release(release, seen):
+            # Bail if we've already been here:
+            if release in seen: return
+            # Declare that we've been here:
+            seen.add(release)
+            # Process all parents first:  **(we haven't pruned deleted releases yet!)**
+            for after in [x for x in release_dicts[release].get('after', []) if not x.get('delete')]:
+                auto_create_backstories_for_auto_wrapped_release(after['name'], seen)
+            # Bail if this release does not have `auto-wrap-in-backstory` set:
+            if not release_dicts[release].get('auto-wrap-in-backstory'): return
+            # Okay!  This is an auto-wrapped release.  Set up new ancestries to declare
+            # this release as a backstory of this release's descendants:
+            #  **(we haven't pruned deleted releases yet!)**
+            ancestors = [x['name'] for x in release_dicts[release].get('after', []) if
+                not x.get('delete') and not x.get('is-backstory')]
+            for before in [x for x in release_dicts[release]['before'] if not x.get('delete')]:
+
+                rbefore = release_dicts[before['name']]
+
+                # If the link from `before` to `release` already has `is-backstory` set, then bail:
+                if any([x.get('is-backstory') for x in rbefore.get('after', []) if x['name'] == release]):
+                    log.debug('Warning: Refusing to auto-wrap %s in a backstory merging into %s because '
+                              'the ancestry link from %s to %s is already a backstory',
+                              release, before['name'], before['name'], release)
+                    continue
+
+                self.assocary_generic_setattr(rbefore,
                                               "release_dicts['%s']" % (before['name'],),
-                                              'after', True, [ancestry_data], 'name')
-            for after in info.get('after', []):
-                ancestry_data = structure_deep_copy(after, key_filter=ancestry_mirroring_key_filter)
-                ancestry_data['name'] = name
-                self.assocary_generic_setattr(release_dicts[after['name']],
-                                              "release_dicts['%s']" % (after['name'],),
-                                              'before', True, [ancestry_data], 'name')
+                                              'after', True, [{'name': release, 'is-backstory': True}], 'name')
+                # ABK: This line in particular is what forces us to need to re-doubly-link everything.
+                self.assocary_generic_setattr(rbefore,
+                                              "release_dicts['%s']" % (before['name'],),
+                                              'after', True, [{'name': x} for x in ancestors], 'name')
+        seen = set()
+        for release in release_dicts.keys():
+            auto_create_backstories_for_auto_wrapped_release(release, seen)
+
+        # The auto-created backstories require us to re-doubly-link everything:
+        doubly_link()
 
         # Now that all release ancestry links marked for deletion have been marked for deletion on both ends,
         # do another sweep through the entire ancestry graph, deleting ancestry links marked for deletion:
@@ -349,7 +396,7 @@ class SeanoDataAggregator(object):
             obj[key] = obj[key] | value
             return
 
-        if type(obj[key]) in [ascii_str_type, unicode_str_type]:
+        if type(obj[key]) in [ascii_str_type, unicode_str_type, bool]:
             obj[key] = value
             return
 
