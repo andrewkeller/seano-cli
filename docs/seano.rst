@@ -344,6 +344,111 @@ In practice, what ends up happening is:
 * ``1.6`` contains notes for ``1.1``, ``1.2``, ``1.3``, ``1.4``, ``1.5``, and ``1.6``
 
 
+Disappearing individual releases
+--------------------------------
+
+Being able to disappear an individual release is most commonly useful in these scenarios:
+
+#. The unwanted release is auto-declared via a tag in Git, and it's not worth the effort to delete the tag in all
+   clones of the repo, thus the tag continues to exist
+#. The unwanted release was released to a subset of customers, so we can't outright delete the release everywhere,
+   because Member Care needs memory of the release in order to help those customers
+
+Those use cases boil down to these features in ``seano``:
+
+#. **The ability to completely delete a release from the release ancestry graph**
+
+   An individual release may be completely deleted from the release ancestry graph by setting ``delete`` to
+   ``True`` on a release:
+
+   .. code-block:: yaml
+
+      releases:
+      - name: 1.2.3
+        # This release is auto-detected by Git, but
+        # we don't want it; delete this release.
+        delete: True
+
+   When a release is marked for deletion, any auto-detected ancestry links (i.e., by the Git scanner) are
+   auto-re-linked to navigate around the deleted release.
+
+   Deleting a release out of the release ancestry graph does not impact note collection; notes are still
+   collected.  However, when a release is deleted from the ancestry graph, it is no longer eligible to be
+   the recipient of notes; notes originally destined for the now deleted release are instead assigned to
+   all of its descendants.
+
+#. **The ability to "delete" a release from the release ancestry graph only in public views, without erasing
+   it everywhere**
+
+   To make one or more releases invisible to public view without deleting them, wrap the releases in a backstory
+   (see :ref:`seano-backstory`).
+
+   In practice, when you want to wrap *a single release* in a backstory, it's often because something eventful
+   happened with that release in particular.  Thus, being forced to go to a *different* release and set up *two*
+   new ancestry links feels like somewhat of a boondoggle — less declarative and less human-readable.
+
+   As an alternative, if something eventful happened on a release that causes you to desire for it to be a
+   backstory of each of its descendant releases, you may set ``auto-wrap-in-backstory`` to ``True`` on that
+   release:
+
+   .. code-block:: yaml
+
+      releases:
+      - name: 1.2.3
+        # A major bug was found in this release while in beta,
+        # which we quickly patched in the next release.
+        # Remove this release from public views:
+        auto-wrap-in-backstory: True
+
+   Regardless of your existing release ancestry graph, the above will cause ``seano`` to automatically go to each
+   of the descendants of the current release and:
+
+   #. Set ``is-backstory`` to ``True`` on the ancestry link to this release
+   #. Add a new ancestry links to each of the ancestors of this release that do not have ``is-backstory`` set on
+      them
+
+   The following is a graphical depiction of the above explanation, also demonstrating why we call it *"wrapping"*
+   a release in a backstory:
+
+   .. code-block:: text
+
+        Ancestry graph        Ancestry graph
+      explicitly typed in   after auto-mutated
+      -------------------   ------------------
+
+      * 1.2.4               *  1.2.4
+      |                     |\
+      |                     | |- is-backstory: True
+      |                     | |
+      * 1.2.3 (auto-wrap)   | *  1.2.3
+      |                     |/
+      * 1.2.2               *  1.2.2
+
+   For the sake of argument, if you were to forego using ``auto-wrap-in-backstory`` and instead configure a
+   backstory via the ancestry schema, you would end up with something like the below.  The below is functionally
+   identical to the above, except that it is less human-readable.  Well, and also that the above really says to
+   automatically create backstories for *each of the descendants*, whereas the below is explicitly one backstory.
+
+   .. code-block:: yaml
+
+      releases:
+      - name: 1.2.4
+        after:
+        - name: 1.2.3
+          # A major bug was found in 1.2.3, which
+          # we quickly patched in this release.
+          # Remove 1.2.3 from public views:
+          is-backstory: True
+        - name: 1.2.2
+          # This is the previous GM release
+          # (this declares the fork point of
+          #  the backstory that includes 1.2.3)
+
+   Using ``auto-wrap-in-backstory`` is compatible with declaring a backstory via the ancestry schema.
+   Specifically, if you use it on a release that is the merge point of a backstory, the backstory's fork point
+   is identified and copied when ``seano`` auto-creates the new backstory.
+
+
 Onboarding old data
 -------------------
 
