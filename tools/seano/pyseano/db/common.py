@@ -135,7 +135,7 @@ class SeanoDataAggregator(object):
             #  **(we haven't pruned deleted releases yet!)**
             ancestors = [x['name'] for x in release_dicts[release].get('after', []) if
                 not x.get('delete') and not x.get('is-backstory')]
-            for before in [x for x in release_dicts[release]['before'] if not x.get('delete')]:
+            for before in [x for x in release_dicts[release].get('before', []) if not x.get('delete')]:
 
                 rbefore = release_dicts[before['name']]
 
