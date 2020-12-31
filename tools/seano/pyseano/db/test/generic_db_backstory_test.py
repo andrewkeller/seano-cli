@@ -157,7 +157,7 @@ releases:
                 {
                     'name': 'five',
                     'before': [],
-                    'after': [{'name': 'four', 'is-backstory': True}, {'name': 'one'}],
+                    'after': [{'name': 'one'}, {'name': 'four', 'is-backstory': True}],
                     'notes': [
                         {
                             'id': 'five_note',
@@ -287,7 +287,7 @@ releases:
                 {
                     'name': 'five',
                     'before': [],
-                    'after': [{'name': 'four', 'is-backstory': True}, {'name': 'one'}],
+                    'after': [{'name': 'one'}, {'name': 'four', 'is-backstory': True}],
                     'notes': [
                         {
                             'id': 'five_note',
@@ -314,7 +314,7 @@ releases:
                     'name': 'four',
                     'auto-wrap-in-backstory': True,
                     'before': [{'name': 'five'}],
-                    'after': [{'name': 'three', 'is-backstory': True}, {'name': 'two'}],
+                    'after': [{'name': 'two'}, {'name': 'three', 'is-backstory': True}],
                     'notes': [
                         {
                             'id': 'four_note',
