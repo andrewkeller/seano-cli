@@ -326,7 +326,8 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                 #      our generator before we finish reading the entire Git history.  (Assuming this syntax is
                 #      correct, of course)
                 p = subprocess.Popen(
-                    ['git', 'log', '--decorate=full', '--name-status', '-M100%', '--pretty=format:%H %P%d'],
+                    ['git', 'log', '--topo-order', '--decorate=full', '--name-status', '-M100%',
+                     '--pretty=format:%H %P%d'],
                     cwd=self.repo, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     bufsize=4096, # hopefully large enough to capture any possible stderr without blocking
                 )
