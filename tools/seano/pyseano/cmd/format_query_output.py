@@ -14,12 +14,18 @@ import logging
 from pyseano.utils import SeanoFatalError
 from support.seano.views.ce_sphinx_1 import compile_seano_ce_sphinx_1
 from support.seano.views.qa_notes import compile_qa_notes
+from support.seano.views.wiki_mc_notes import compile_confluence_mc_notes
+from support.seano.views.wiki_release_notes import compile_confluence_release_notes
+from support.seano.views.wiki_tech_notes import compile_confluence_tech_notes
 
 log = logging.getLogger(__name__)
 
 format_functions = {
     'ce-sphinx-1': compile_seano_ce_sphinx_1,
     'qa-notes': compile_qa_notes,
+    'confluence_mc_notes': compile_confluence_mc_notes,
+    'confluence_release_notes': compile_confluence_release_notes,
+    'confluence_tech_notes': compile_confluence_tech_notes,
 }
 
 format_choices = list(format_functions.keys());

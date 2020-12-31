@@ -143,8 +143,22 @@ releases:
 SEANO_DB_SUBDIR = 'v1'
 SEANO_NOTE_EXTENSION = '.yaml'
 SEANO_NOTE_DEFAULT_TEMPLATE_CONTENTS = '''---
+risk: One of low, medium, high; risk level does not factor in deployment tricks to lower risk.
+
 tickets:
 - URL to JIRA/Redmine ticket
+
+min-supported-os:        # Only include this section if you changed the minimum supported OS
+  os1: "version number"  # You must specify all OSs every time you define a new value
+  os2: "version number"  # OS versions should be quoted to avoid yaml assuming numeric type
+
+max-supported-os:        # Only include this section if you changed the maximum supported OS
+  os1: "version number"  # You must specify all OSs every time you define a new value
+  os2: "version number"  # OS versions should be quoted to avoid yaml assuming numeric type
+
+employee-milestones-list-loc-rst:
+- en-US: Short description of a big change
+- en-US: Use sparingly, because these are printed prominently
 
 customer-short-loc-hlist-rst:
   en-US:
