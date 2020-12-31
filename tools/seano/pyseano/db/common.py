@@ -230,8 +230,8 @@ class SeanoDataAggregator(object):
 
         # Sort special keys in each release we care about:
         for name, info in release_dicts.items():
-            info['before'] = sorted(info.get('before', []), key=lambda x: x['name'])
-            info['after'] = sorted(info.get('after', []), key=lambda x: x['name'])
+            info['before'] = sorted(info.get('before', []), key=lambda x: (x.get('is-backstory', False), x['name']))
+            info['after'] = sorted(info.get('after', []), key=lambda x: (x.get('is-backstory', False), x['name']))
             info['notes'] = sorted(info.get('notes', []), key=lambda x: x['id'])
 
         # Remove all of the 'accepts_auto_' keys:
