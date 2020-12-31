@@ -675,10 +675,6 @@ parent_versions:
             *
             *  v1.0                 #8
         '''
-        # ABK: This test does not pass reliably; there is a race condition somewhere that is causing trouble.
-        #      Until this test starts passing reliably, stop running it.
-        return
-
         with self.TempDir() as workdir:
             setup_repo(workdir)
             putfile(os.path.join(workdir, 'seano-config.yaml'), '''---
@@ -721,7 +717,7 @@ current_version: "2.0"
                         'name': '2.0',
                         'commit': commit_ids['2.0'],
                         'before': [],
-                        'after': [{'name': '1.0'}, {'name': '1.3'}],
+                        'after': [{'name': '1.3'}],
                         'notes': [],
                     },
                     {
@@ -735,27 +731,27 @@ current_version: "2.0"
                         'name': '1.2b5',
                         'commit': commit_ids['1.2b5'],
                         'before': [{'name': '1.3'}],
-                        'after': [], # IMPROVE: This list is incorrect.
+                        'after': [{'name': '1.2b1'}],
                         'notes': [],
                     },
                     {
                         'name': '1.2',
                         'commit': commit_ids['1.2'],
                         'before': [{'name': '1.3'}],
-                        'after': [{'name': '1.1'}, {'name': '1.2b1'}],
+                        'after': [{'name': '1.2b1'}],
                         'notes': [],
                     },
                     {
                         'name': '1.2b1',
                         'commit': commit_ids['1.2b1'],
-                        'before': [{'name': '1.2'}], # IMPROVE: This list is incorrect.
-                        'after': [], # IMPROVE: This list is incorrect.
+                        'before': [{'name': '1.2'}, {'name': '1.2b5'}],
+                        'after': [{'name': '1.1'}],
                         'notes': [],
                     },
                     {
                         'name': '1.1',
                         'commit': commit_ids['1.1'],
-                        'before': [{'name': '1.2'}], # IMPROVE: This list is incorrect.
+                        'before': [{'name': '1.2b1'}],
                         'after': [{'name': '1.1b2'}],
                         'notes': [],
                     },
@@ -763,13 +759,13 @@ current_version: "2.0"
                         'name': '1.1b2',
                         'commit': commit_ids['1.1b2'],
                         'before': [{'name': '1.1'}],
-                        'after': [], # IMPROVE: This list is incorrect.
+                        'after': [{'name': '1.0'}],
                         'notes': [],
                     },
                     {
                         'name': '1.0',
                         'commit': commit_ids['1.0'],
-                        'before': [{'name': '2.0'}], # IMPROVE: This list is incorrect.
+                        'before': [{'name': '1.1b2'}],
                         'after': [],
                         'notes': [],
                     },
