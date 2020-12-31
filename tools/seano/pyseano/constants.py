@@ -177,9 +177,9 @@ employee-technical-loc-rst:
     This field is a single large reStructuredText blob.  Go wild.  Explaining
     details is good.
 
-cs-technical-loc-rst:
+mc-technical-loc-rst:
   en-US: |
-    You are talking to a Tier-2 Customer Service Representative.
+    You are talking to a Tier-2 Member Care Representative.
 
     What changed?
 
@@ -194,10 +194,10 @@ cs-technical-loc-rst:
     good, but tend toward environmental and human information over API
     architecture explanations.
 
-    If this change is not worth mentioning to Customer Service at all, then
+    If this change is not worth mentioning to Member Care at all, then
     delete this section.
 
-employee-testing-loc-rst:
+qa-technical-loc-rst:
   en-US: |
     Explain what needs to be tested (new things to test) and/or re-tested
     (impact requiring regression testing).  Target audience is QA.
