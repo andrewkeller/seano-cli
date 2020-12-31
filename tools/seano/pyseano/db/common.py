@@ -4,9 +4,9 @@ pyseano/db/common.py
 Organizes a set of release notes, does some sanity checking, and serializes as Json
 """
 
+from pyseano.db.release_sorting import sorted_release_names_from_releases
 from pyseano.db.schema_upgrade import upgrade_note_schema, upgrade_release_schema
 from pyseano.utils import SeanoFatalError, list_if_not_already, ascii_str_type, unicode_str_type
-import itertools
 import logging
 import sys
 import yaml
@@ -241,54 +241,8 @@ class SeanoDataAggregator(object):
             return True
         release_dicts = structure_deep_copy(release_dicts, key_filter=my_key_filter)
 
-        # Define a sort order for the releases:
-        # ABK: This sort algorithm behaves a lot like Git does, and should be good enough in most
-        #      cases.  If you're developing a fancy 2D graph of the releases, then the sort order
-        #      doesn't matter at all, because you're going to manually read the before and after
-        #      lists on each release to establish your topology.  For a more primitive 1D view
-        #      (where everything is a flat list), having the list of releases pre-sorted in some
-        #      sort of sane manner is handy, because it lets you just go down the list and print
-        #      everything in order, despite the concept of non-linear graph flattening being
-        #      somewhat non-trivial.
-        #
-        #      Because this algorithm is not tail-recursive, it will eventually overflow the
-        #      stack when we build up enough releases.  Iterate as necessary.
-
-        release_order = []
-        releases_togo = set(release_dicts.keys())
-
-        def get_release_order(release):
-
-            # If this releas has already been visited, then return an empty list:
-            if release['name'] not in releases_togo:
-                return []
-
-            # Mark this release as visited:
-            releases_togo.remove(release['name'])
-
-            # Get a list of all of our unvisited parents:
-            parents = [x['name'] for x in release['after']]
-
-            # Get release order for each of the parents, from left to right, without
-            # repeating any ancestors:
-            order = [get_release_order(release_dicts[x]) for x in parents]
-
-            # Return this release name, followed by each of the parent lists, right-to-left:
-            return [release['name']] + list(itertools.chain(*reversed(order)))
-
-        release_order.extend(get_release_order(release_dicts[self.current_version]))
-
-        # As a final fallback, dump the remaining unselected releases at the end:
-
-        for x in sorted(list(releases_togo)):
-            log.info('Having trouble flattening ancestry history: %s might be in the wrong position.', x)
-            release_order.append(x)
-            releases_togo.remove(x)
-
-        # Flatten into a list in the oder we decided on earlier, and return:
-
-        return [release_dicts[x] for x in release_order]
-
+        # Return the list of releases, in an idealized sort order:
+        return [release_dicts[x] for x in sorted_release_names_from_releases(release_dicts)]
 
     # internal plumbing:
 
