@@ -6,7 +6,7 @@ Organizes a set of release notes, does some sanity checking, and serializes as J
 
 from pyseano.db.release_sorting import sorted_release_names_from_releases
 from pyseano.db.schema_upgrade import upgrade_note_schema, upgrade_release_schema
-from pyseano.utils import SeanoFatalError, list_if_not_already, ascii_str_type, unicode_str_type
+from pyseano.utils import FILE_ENCODING_KWARGS, SeanoFatalError, list_if_not_already, ascii_str_type, unicode_str_type
 import logging
 import sys
 import yaml
@@ -258,7 +258,7 @@ class SeanoDataAggregator(object):
 
             # Overwrite all members of the template with what exists on disk:
             try:
-                with open(filename, 'r') as f:
+                with open(filename, 'r', **FILE_ENCODING_KWARGS) as f:
                     for d in yaml.load_all(f, Loader=yaml.FullLoader):
                         for k, v in d.items():
                             self.note_setattr(filename, uid, k, False, v)
