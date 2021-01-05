@@ -17,6 +17,7 @@ ascii_str_type = bytes if sys.hexversion >= 0x3000000 else str
 unicode_str_type = str if sys.hexversion >= 0x3000000 else unicode
 
 log = logging.getLogger(__name__)
+FILE_ENCODING_KWARGS = {'encoding': 'utf-8'} if sys.hexversion >= 0x3000000 else {}
 
 
 class SeanoFatalError(Exception):
@@ -67,14 +68,14 @@ def write_file(filename, contents):
     if os.path.isfile(filename):
         raise SeanoFatalError("cannot write new file (already exists): %s" % (filename,))
     try:
-        with open(filename, "w") as f:
+        with open(filename, "w", **FILE_ENCODING_KWARGS) as f:
             f.write(contents)
         return
     except IOError as e:
         if e.errno != errno.ENOENT:
             raise SeanoFatalError("cannot write new file: %s" % (e,))
     os.makedirs(os.path.dirname(filename))
-    with open(filename, "w") as f:
+    with open(filename, "w", **FILE_ENCODING_KWARGS) as f:
         f.write(contents)
 
 

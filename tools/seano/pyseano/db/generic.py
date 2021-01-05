@@ -31,7 +31,7 @@ class GenericSeanoDatabase(object):
         self.config = dict()
         def load_file(cfg, is_required):
             try:
-                with open(cfg, "r") as f:
+                with open(cfg, 'r', **FILE_ENCODING_KWARGS) as f:
                     for d in yaml.load_all(f, Loader=yaml.FullLoader):
                         # An empty section in yaml yields None here.
                         # Although it's weird (wrong?) to have an empty section
@@ -116,8 +116,6 @@ class GenericSeanoDatabase(object):
 
     def rekey_note(self, from_id):
         from_filename = self.make_note_filename_from_uid(from_id)
-        with open(from_filename, 'r') as f:
-            data = f.read()
         to_filename = self.make_new_note_filename()
         try:
             os.makedirs(os.path.dirname(to_filename))
