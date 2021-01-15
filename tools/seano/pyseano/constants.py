@@ -182,43 +182,53 @@ employee-technical-loc-rst:
   en-US: |
     You are talking to your future self and Ops.
 
-    What changed?
+    What was the problem?  What solutions did you reject?  Why did you choose
+    this solution?  What might go wrong?  What can Ops do to resolve an outage
+    over the weekend?
 
-    What might go wrong?
-
-    What can Ops do to resolve an outage over the weekend?
-
-    This field is a single large reStructuredText blob.  Go wild.  Explaining
-    details is good.
+    This field is a single large reStructuredText blob.  Explaining details is
+    good.
 
 mc-technical-loc-rst:
   en-US: |
     You are talking to a Tier-2 Member Care Representative.
 
-    What changed?
+    What bug was fixed?  How does this impact users?  How does this impact MC?
 
-    How does this change interact with the environment?
+    Assume something *is going wrong*.  What caused it?  How can MC resolve it
+    over the weekend?
 
-    How does this change interact with the user?
+    T2's are technically inclined, so if the user-facing or MC-facing
+    implications require technical jargon, don't be afraid to use it.  What we
+    want to avoid are, primarily, long-form technical discussions, which is
+    what ``employee-technical-loc-rst`` is for.  In fact, the T2's are
+    technically inclined enough that if they want a longer discussion, they
+    will often go to the Technical Details for the rest of the story.
 
-    Assume something *is going wrong*.  What caused it?  How can a Customer
-    Service Representative resolve it over the weekend?
+    This field is a single large reStructuredText blob.  Being specific is
+    good, but tend toward blunt descriptions of impact rather than long-form
+    discussions.  On that note, sometimes a picture is worth a thousand words:
 
-    This field is a single large reStructuredText blob.  Explaining details is
-    good, but tend toward environmental and human information over API
-    architecture explanations.
+    .. image:: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cGF0aCBkPSJNNTAsMzBjOS0yMiA0Mi0yNCA0OCwwYzUsNDAtNDAsNDAtNDgsNjVjLTgtMjUtNTQtMjUtNDgtNjVjIDYtMjQgMzktMjIgNDgsMCB6IiBmaWxsPSIjRjAwIiBzdHJva2U9IiMwMDAiLz4KPC9zdmc+
+       :width: 100
+       :alt: red heart with black outline
 
-    If this change is not worth mentioning to Member Care at all, then
-    delete this section.
+    If this change doesn't impact customers or Member Care, then delete this
+    section.
 
 qa-technical-loc-rst:
   en-US: |
-    Explain what needs to be tested (new things to test) and/or re-tested
-    (impact requiring regression testing).  Target audience is QA.
+    You are talking to QA.
 
-    In addition to informing QA of what to test/re-test, this field also is
-    used by QA as a "diff" to be applied to their official test plans.
+    What new features need to be tested?  What old features need to be
+    regression-tested?
 
-    This field is a single large reStructuredText blob.  Go wild.  Explaining
-    details is good.
+    QA uses this section to perform QA, and also as a "diff" to update their
+    own test plan archives.
+
+    This field is a single large reStructuredText blob.  Explaining details is
+    good.  Assume that QA has zero knowledge of *what* to test, but that given
+    that knowledge, they know *how* to test it.  Be specific in descriptions;
+    avoid generalizations when practical.  Be as technical as you want.  If QA
+    has questions, they'll ask you.
 '''
