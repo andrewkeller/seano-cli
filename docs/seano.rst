@@ -168,7 +168,7 @@ own some keys; avoid setting them unless you intend to override them.
     ``seano`` guarantees to all views that these keys will exist.  Some of the :doc:`seanoViews` reserve additional keys
     for their own uses; such additional keys are not mentioned here.
 
-Notes have these keys automatically set on them:
+The following keys are set or used by ``seano`` in note files:
 
 * ``commits``: list of commit IDs that supply this note *(supported SCMs)*
 * ``id``: the ``seano`` note ID
@@ -178,6 +178,11 @@ Notes have these keys automatically set on them:
   * In unsupported SCMs, if you don't set this key, the note will appear in the ``HEAD`` release
 
 * ``refs``: unused; reserved for future use
+* ``relative-sort-string`` (string): the sort order of the list of notes in a release is driven by a lexicographic
+  left-aligned unpadded ascending comparison of this key in each note.  ``seano`` does not set this key; on any
+  given note object, when this field is missing, the note ID (the value of the ``id`` field) is used instead.  This
+  field need not be unique, and is not used as an identifier for anything; it only matters when a note is displayed
+  next to another.
 
 Releases have these keys automatically set on them:
 
