@@ -263,6 +263,65 @@ bird: dog
                       },
                       check_query=lambda found: self.assertEqual(expected, found))
 
+    def testNoteSortOrder(self):
+        config = '''---
+current_version: 1.2.3
+'''
+        note123 = '''---
+foo: bar
+'''
+        note345 = '''---
+fish: cat
+'''
+        note567 = '''---
+bird: dog
+'''
+        note789 = '''---
+relative-sort-string: "456"
+panda: turkey
+'''
+        expected = {
+            'current_version': '1.2.3',
+            'releases': [
+                {
+                    'name': '1.2.3',
+                    'before': [],
+                    'after': [],
+                    'notes': [
+                        {
+                            'id': '123',
+                            'releases': ['1.2.3'],
+                            'foo': 'bar',
+                        },
+                        {
+                            'id': '345',
+                            'releases': ['1.2.3'],
+                            'fish': 'cat',
+                        },
+                        {
+                            'id': '789',
+                            'releases': ['1.2.3'],
+                            'relative-sort-string': '456',
+                            'panda': 'turkey',
+                        },
+                        {
+                            'id': '567',
+                            'releases': ['1.2.3'],
+                            'bird': 'dog',
+                        },
+                    ],
+                },
+            ],
+        }
+        self.run_test(seano_config_data=config,
+                      seano_notes_data={
+                          '123': note123,
+                          '345': note345,
+                          '567': note567,
+                          '789': note789,
+                      },
+                      check_query=lambda found: self.assertEqual(expected, found))
+
     def testNonlinearReleaseAncestry(self):
         r'''
         In this test, we will manufacture a release ancestry that looks like the graph
