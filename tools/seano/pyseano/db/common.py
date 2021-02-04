@@ -229,10 +229,20 @@ class SeanoDataAggregator(object):
                 release_dicts[p]['notes'] = (release_dicts[p].get('notes') or []) + [note]
 
         # Sort special keys in each release we care about:
+        def ancestry_sort_key(x):
+            return (
+                x.get('is-backstory', False),
+                x['name'],
+            )
+        def note_sort_key(x):
+            return (
+                x.get('relative-sort-string') or x['id'], # Missing, empty, or None-ish falls back to the note ID
+                x['id'], # Break ties using the note ID (for when sort strings are identical)
+            )
         for name, info in release_dicts.items():
-            info['before'] = sorted(info.get('before', []), key=lambda x: (x.get('is-backstory', False), x['name']))
-            info['after'] = sorted(info.get('after', []), key=lambda x: (x.get('is-backstory', False), x['name']))
-            info['notes'] = sorted(info.get('notes', []), key=lambda x: x.get('relative-sort-string', x['id']))
+            info['before'] = sorted(info.get('before', []), key=ancestry_sort_key)
+            info['after'] = sorted(info.get('after', []), key=ancestry_sort_key)
+            info['notes'] = sorted(info.get('notes', []), key=note_sort_key)
 
         # Remove all of the 'accepts_auto_' keys:
         def my_key_filter(k):

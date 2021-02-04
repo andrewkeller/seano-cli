@@ -268,9 +268,11 @@ bird: dog
 current_version: 1.2.3
 '''
         note123 = '''---
+relative-sort-string: "345" # ties are broken using the note ID
 foo: bar
 '''
         note345 = '''---
+relative-sort-string: "345" # ties are broken using the note ID
 fish: cat
 '''
         note567 = '''---
@@ -291,11 +293,13 @@ panda: turkey
                         {
                             'id': '123',
                             'releases': ['1.2.3'],
+                            'relative-sort-string': '345',
                             'foo': 'bar',
                         },
                         {
                             'id': '345',
                             'releases': ['1.2.3'],
+                            'relative-sort-string': '345',
                             'fish': 'cat',
                         },
                         {
