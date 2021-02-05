@@ -64,6 +64,14 @@ def coerce_to_unicode_str(s):
     return unicode_str_type(s)
 
 
+def get_unencrypted_shell_input(prompt_text):
+    'Fetches a value from the user on the command-line.'
+    # ABK: Manually writing the prompt because the stock implementation doesn't write to stderr.
+    sys.stderr.write(prompt_text)
+    sys.stderr.flush()
+    return input() if sys.hexversion >= 0x3000000 else raw_input()
+
+
 def write_file(filename, contents):
     if os.path.isfile(filename):
         raise SeanoFatalError("cannot write new file (already exists): %s" % (filename,))
@@ -84,8 +92,8 @@ def edit_files(filenames):
         return
     editor = shlex.split(os.environ.get('SEANO_EDITOR', os.environ.get('EDITOR', SEANO_DEFAULT_EDITOR)))
     if len(filenames) > 9:
-        if raw_input('Found %d notes; are you sure you want to run `%s` with all of them? [y,N]  '
-                     % (len(filenames), ' '.join(editor))).lower() not in ['y', 'ye', 'yes']:
+        if get_unencrypted_shell_input('Found %d notes; are you sure you want to run `%s` with all of them? [y,N]  '
+                                       % (len(filenames), ' '.join(editor))).lower() not in ['y', 'ye', 'yes']:
             return
     subprocess.call(editor + filenames)
 
