@@ -105,15 +105,28 @@ def sorted_release_names_from_releases(release_dicts):
         # Make it negative, so that it sorts in the same direction as the edge delta:
         node_index = 0 - node_index
 
+        # It's rare, but it's possible for the combination of the edge delta and node index
+        # to be equal.  As a third-stage sort, let's look at the total number of descendants.
+        # Generally speaking, this tends to prioritize keeping the releases of longer-running
+        # lineages grouped together in an unbroken series.  This pattern is completely
+        # arbitrary and does not have a solid grounding in graph theory, so it may need
+        # reworking in the future.  For now, it's a decent way to help keep the sort order
+        # stable.
+        num_of_descendants = len(get_descendants(node))
+        # Make it negative, so that it sorts in the same direction as the edge delta:
+        num_of_descendants = 0 - num_of_descendants
+
         # And return our magical sort order value:
 
-        return edge_delta, node_index
+        return edge_delta, node_index, num_of_descendants
 
     while todo:
 
         candidates = list_nodes_eligible_for_printing()
 
         if not candidates:
+            # If we don't have any explicit candidates, then pick a node at random,
+            # and warn the user that this is happening.
             for x in sorted(todo):
                 log.warn('Having trouble flattening ancestry history: %s might be in the wrong position.', x)
                 yield x
@@ -122,9 +135,31 @@ def sorted_release_names_from_releases(release_dicts):
             continue
 
         if len(candidates) > 1:
-            candidates.sort(key=human_graph_sort_order)
+            # If we have more than one candidate, try to sort them.  The human_graph_sort_order()
+            # function (above) tries to generate a sortable value for any given node that we can
+            # use to identify which node is best to print next, but it's not perfect.
+            #
+            # Pre-load the sort order values (because we'll be analyzing them in a moment):
+            candidates = [(c, human_graph_sort_order(c)) for c in candidates]
 
-        # Pick the candidate that adds the fewest number of edges:
+            # Sort by our magical sort values:
+            candidates.sort(key=lambda x: x[1])
 
+            # Identify duplicate sort values.  Duplicate sort values indicate scenarios where the
+            # sort order function is not smart enough.  When duplicate sort values are found, warn
+            # the user.
+            #
+            # Note that we don't actually care if there are *any* duplicates *anywhere* -- we only
+            # care if there is an N-way tie for first place.
+            nondeterministic_conflicts = [x[0] for x in candidates if x[1] == candidates[0][1]]
+            if len(nondeterministic_conflicts) > 1:
+                log.warn("Having trouble flattening ancestry history: can't decide which of %s should come first." % (
+                         ' or '.join(nondeterministic_conflicts),))
+
+            # Convert the candidates list back to its original schema (strip out the sort values).
+            # We will arbitrarily pick the one at the beginning of the list.
+            candidates = [x[0] for x in candidates]
+
+        # Pick the candidate that is deemed the most desirable by our magical sort algorithm:
         yield candidates[0]
         todo.remove(candidates[0])
