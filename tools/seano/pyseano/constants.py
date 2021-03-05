@@ -193,28 +193,41 @@ mc-technical-loc-rst:
   en-US: |
     You are talking to a Tier-2 Member Care Representative.
 
-    What bug was fixed?  How does this impact users?  How does this impact MC?
+    What changed?  How does this impact users?  How does this impact MC?
 
     Assume something *is going wrong*.  What caused it?  How can MC resolve it
     over the weekend?
 
-    T2's are technically inclined, so if the user-facing or MC-facing
-    implications require technical jargon, don't be afraid to use it.  What we
-    want to avoid are, primarily, long-form technical discussions, which is
-    what ``employee-technical-loc-rst`` is for.  In fact, the T2's are
-    technically inclined enough that if they want a longer discussion, they
-    will often go to the Technical Details for the rest of the story.
+    T2's have a dedicated block of time for catching up on release notes for
+    all products at CE.  They oversee many products, so we try to keep this
+    section as blunt and brief as is practical.  T2's are technically inclined,
+    so feel free to use technical jargon to shorten explanations.
 
-    This field is a single large reStructuredText blob.  Being specific is
-    good, but tend toward blunt descriptions of impact rather than long-form
-    discussions.  On that note, sometimes a picture is worth a thousand words:
+    Don't be afraid to be terse; if a T2 has questions, they'll often hop over
+    to the ``employee-technical-loc-rst`` section to look for more details.
+
+    Sometimes a screenshot is a great way to shorten an explanation:
 
     .. image:: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cGF0aCBkPSJNNTAsMzBjOS0yMiA0Mi0yNCA0OCwwYzUsNDAtNDAsNDAtNDgsNjVjLTgtMjUtNTQtMjUtNDgtNjVjIDYtMjQgMzktMjIgNDgsMCB6IiBmaWxsPSIjRjAwIiBzdHJva2U9IiMwMDAiLz4KPC9zdmc+
        :width: 100
        :alt: red heart with black outline
 
-    If this change doesn't impact customers or Member Care, then delete this
-    section.
+    If what you want to write here is identical to what you've already written
+    in another section, you can use Yaml's reference syntax to copy another
+    section.  You can copy any ``*-loc-rst`` field, or any ``*-loc-hlist-rst``
+    field.  Example:
+
+    .. code-block:: yaml
+
+       employee-short-loc-hlist-rst: &empl-short
+         en-US: #                    ^^^^^^^^^^^  Mark section to copy
+         - Hello, this is an internal release note
+
+       mc-technical-loc-rst: *empl-short
+       #                     ^^^^^^^^^^^  Copy contents of the marked section
+
+    If this change doesn't impact customers or Member Care, or is too obscure
+    to mention, then delete this section.
 
 qa-technical-loc-rst:
   en-US: |
