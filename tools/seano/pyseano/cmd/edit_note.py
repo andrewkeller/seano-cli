@@ -30,6 +30,6 @@ def edit_latest_release_note(db, include_wip, include_modified, patterns):
             files.extend(new_files)
     if not files:
         raise SeanoFatalError("Release notes database is empty")
-    files = sorted(list(set(files)))
+    files = sorted(set(files))
     log.debug("About to edit:\n    %s", "\n    ".join(files))
     edit_files(files)
