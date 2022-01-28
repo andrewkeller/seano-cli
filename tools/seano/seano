@@ -109,7 +109,7 @@ def main():
 
         # Else, only print the error message, and then die:
         sys.stderr.write('fatal: ')
-        sys.stderr.write(e.message)
+        sys.stderr.write(str(e))
         sys.stderr.write(os.linesep)
         sys.exit(1)
 
