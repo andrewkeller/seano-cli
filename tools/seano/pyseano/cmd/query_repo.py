@@ -11,11 +11,11 @@ import json
 log = logging.getLogger(__name__)
 
 
-def query_release_notes(db, out, **db_kwargs):
+def query_release_notes(db_search_seed_path, out, **db_kwargs):
     if not out:
         raise SeanoFatalError("Invalid desitnation file: (empty string)")
 
-    data = open_seano_database(db, **db_kwargs).query()
+    data = find_and_open_seano_database(db_search_seed_path, **db_kwargs).query()
     data = json.dumps(data, sort_keys=True)
 
     if sys.hexversion < 0x3000000:
