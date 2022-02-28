@@ -69,9 +69,6 @@ class GitSeanoDatabase(GenericSeanoDatabase):
         subprocess.check_call(['git', 'add', '-N', filename])
         return filename
 
-    def move_note(self, from_filename, to_filename):
-        subprocess.check_call(['git', 'mv', from_filename, to_filename])
-
     def most_recently_added_notes(self, include_modified):
         for thing in self.scan_git_seano_db(include_modified):
             notes = thing.get('notes', None)

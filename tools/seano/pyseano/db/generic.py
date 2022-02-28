@@ -114,19 +114,6 @@ class GenericSeanoDatabase(object):
         filenames.sort()
         return filenames
 
-    def rekey_note(self, from_id):
-        from_filename = self.make_note_filename_from_uid(from_id)
-        to_filename = self.make_new_note_filename()
-        try:
-            os.makedirs(os.path.dirname(to_filename))
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise
-        self.move_note(from_filename, to_filename)
-
-    def move_note(self, from_filename, to_filename):
-        os.rename(from_filename, to_filename)
-
     def most_recently_added_notes(self, include_modified):
         raise SeanoFatalError("Database is not repository-backed; unable to intuit which release note is latest")
 
