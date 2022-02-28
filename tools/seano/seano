@@ -70,11 +70,6 @@ def main():
     add_db_args(subparser)
     subparser.set_defaults(func=print_note_template)
 
-    subparser = subparsers.add_parser('rekey', help='Move an existing note a new ID')
-    subparser.set_defaults(func=rekey_release_note)
-    add_db_args(subparser)
-    subparser.add_argument('uid', action='store', help='The ID of the note you want to re-key')
-
     subparser = subparsers.add_parser('format', help='Convert a seano query output file into something human-readable')
     subparser.set_defaults(func=format_query_output)
     subparser.add_argument('--src', action='store', required=True, help='Input file; use a single hyphen for stdin')
