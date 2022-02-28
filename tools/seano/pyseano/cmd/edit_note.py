@@ -10,8 +10,8 @@ from pyseano.utils import *
 log = logging.getLogger(__name__)
 
 
-def edit_latest_release_note(db, include_wip, include_modified, patterns):
-    db = open_seano_database(db)
+def edit_latest_release_note(db_search_seed_path, include_wip, include_modified, patterns):
+    db = find_and_open_seano_database(db_search_seed_path)
     files = []
     # IMPROVE: In a Git-backed project, `most_recently_added_notes()` and `get_notes_matching_pattern()` are both
     #          implemented using the Git scanner.  And, the use of `get_notes_matching_pattern()` is inside a for

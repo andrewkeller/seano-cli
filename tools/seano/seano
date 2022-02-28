@@ -23,8 +23,9 @@ def main():
     subparsers = parser.add_subparsers(help='verb')
 
     def add_db_args(subparser, needsExtendedInfo=False):
-        subparser.add_argument('--db', action='store', default=os.environ.get('SEANO_DB_PATH', ''),
-                               help='The path to the database; overrides the SEANO_DB_PATH environment variable if set')
+        subparser.add_argument('--db', metavar='PATH', action='store', dest='db_search_seed_path', default='',
+                               help='The path at which searching for a .seano file should start.  ' +
+                               'Defaults to the current working directory.')
         if not needsExtendedInfo: return
         subparser.add_argument('--config-annex', action='store', metavar='PATH', dest='config_annex_path',
                                help='After loading the main config file located inside the seano database, also load ' +
@@ -32,7 +33,14 @@ def main():
 
     subparser = subparsers.add_parser('init', help='Initialize a new release notes database')
     subparser.set_defaults(func=make_new_release_notes_db)
-    add_db_args(subparser)
+    subparser.add_argument('--dot-seano-dir', action='store', default=os.path.join('.', ''),
+                           help='The path where the `.seano` file pointing to the database should be created.  ' +
+                           'A relative path is assumed to be relative to the shell\'s CWD.  ' +
+                           'Defaults to `%(default)s`.')
+    subparser.add_argument('--db-path', action='store', default=os.path.join('.', 'docs', 'seano-db'),
+                           help='The path where the seano database itself should be created.  ' +
+                           'A relative path is assumed to be relative to the directory containing the `.seano` file.  ' +
+                           'Defaults to `%(default)s`.')
 
     subparser = subparsers.add_parser('new', help='Create a new release note and edit it')
     subparser.set_defaults(func=make_new_release_notes)

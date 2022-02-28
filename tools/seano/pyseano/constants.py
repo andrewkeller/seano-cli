@@ -4,6 +4,9 @@ pyseano/constants.py
 Shared constants used by seano
 """
 
+SEANO_DOTFILE_FILE = '.seano'
+SEANO_DOTFILE_DB_PATH_KEY = 'seano-db' # e.g.: "seano-db: ./foo/bar"
+
 SEANO_DEFAULT_EDITOR = 'vim -O'
 
 SEANO_CONFIG_FILE = 'seano-config.yaml'
