@@ -144,6 +144,7 @@ releases:
 '''
 
 SEANO_DB_SUBDIR = 'v1'
+SEANO_EXTERN_NOTE_EXTENSION_PREFIX = '.extern-'
 SEANO_NOTE_EXTENSION = '.yaml'
 SEANO_NOTE_DEFAULT_TEMPLATE_CONTENTS = '''---
 risk: One of low, medium, high; risk level does not factor in deployment tricks to lower risk.
@@ -248,3 +249,16 @@ qa-technical-loc-rst:
     avoid generalizations when practical.  Be as technical as you want.  If QA
     has questions, they'll ask you.
 '''
+
+# Generally speaking, notes in seano contain keys that are designed
+# to be consumed by humans, and by seano views.  When a key is
+# intended to be consumed by seano itself for internal plumbing
+# unrelated to release notes themselves, that's weird.  We like to
+# prefix such keys with `x-seano-`, to help point out that the keys
+# are very likely managed by seano itself and may be autonomously
+# added or removed, and that views should be hesitant to rely on
+# them.
+
+SEANO_NOTE_KEY_RELPATH_TO_ORIGINAL_NOTE = 'x-seano-relpath-to-original'
+SEANO_NOTE_KEY_SHA1_OF_ORIGINAL_NOTE = 'x-seano-sha1-of-original'
+SEANO_NOTE_KEY_IS_GHOST = 'x-seano-is-ghost'

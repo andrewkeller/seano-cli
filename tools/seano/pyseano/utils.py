@@ -75,6 +75,10 @@ def get_unencrypted_shell_input(prompt_text):
 def write_file(filename, contents):
     if os.path.isfile(filename):
         raise SeanoFatalError("cannot write new file (already exists): %s" % (filename,))
+    write_existing_file(filename, contents)
+
+
+def write_existing_file(filename, contents):
     try:
         with open(filename, "w", **FILE_ENCODING_KWARGS) as f:
             f.write(contents)

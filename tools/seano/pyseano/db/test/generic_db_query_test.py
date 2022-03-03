@@ -215,6 +215,10 @@ fish: cat
 releases: 1.2.1
 bird: dog
 '''
+        ghost_note = '''---
+releases: 1.2.4
+x-seano-is-ghost: true
+'''
         expected = {
             'current_version': '1.2.3',
             'releases': [
@@ -260,6 +264,7 @@ bird: dog
                           '123': note123,
                           '456': note456,
                           '789': note789,
+                          'gho': ghost_note, # should not impact anything
                       },
                       check_query=lambda found: self.assertEqual(expected, found))
 

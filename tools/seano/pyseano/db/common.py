@@ -4,6 +4,7 @@ pyseano/db/common.py
 Organizes a set of release notes, does some sanity checking, and serializes as Json
 """
 
+from pyseano.constants import SEANO_NOTE_KEY_IS_GHOST
 from pyseano.db.release_sorting import sorted_release_names_from_releases
 from pyseano.db.schema_upgrade import upgrade_note_schema, upgrade_release_schema
 from pyseano.utils import FILE_ENCODING_KWARGS, SeanoFatalError, list_if_not_already, ascii_str_type, unicode_str_type
@@ -12,6 +13,10 @@ import sys
 import yaml
 
 log = logging.getLogger(__name__)
+
+
+class AttemptToLoadGhostNote(Exception):
+    pass
 
 
 def structure_deep_copy(src, key_filter=lambda _: True):
@@ -73,17 +78,21 @@ class SeanoDataAggregator(object):
             self.release_setattr(name, k, True, v)
 
     def import_note(self, path, uid, **automatic_attributes):
-        if not automatic_attributes:
-            # note_setattr() (below) invokes get_note() under-the-hood, which means that
-            # simply setting an automatic attribute will load the note from disk first.
-            # When no automatic attributes exist, the loop doesn't run.  In this case,
-            # manually invoke get_note(), discarding the result, to ensure that the note
-            # file was loaded, which is the whole point of this function.
-            self.get_note(path, uid)
-            return
+        try:
+            if not automatic_attributes:
+                # note_setattr() (below) invokes get_note() under-the-hood, which means that
+                # simply setting an automatic attribute will load the note from disk first.
+                # When no automatic attributes exist, the loop doesn't run.  In this case,
+                # manually invoke get_note(), discarding the result, to ensure that the note
+                # file was loaded, which is the whole point of this function.
+                self.get_note(path, uid)
+                return
 
-        for k, v in automatic_attributes.items():
-            self.note_setattr(path, uid, k, True, v)
+            for k, v in automatic_attributes.items():
+                self.note_setattr(path, uid, k, True, v)
+
+        except AttemptToLoadGhostNote:
+            pass
 
 
     def dump(self):
@@ -277,6 +286,12 @@ class SeanoDataAggregator(object):
                 log.error('Something exploded while trying to load a note from disk.  '
                           'We were trying to load the note with id %s, located at %s', uid, filename)
                 raise
+
+            # If this is a ghost note, then torch the note we just created, and
+            # notify the caller to stop whatever it was doing before we got here:
+            if data.get(SEANO_NOTE_KEY_IS_GHOST, False):
+                del self.notes[uid]
+                raise AttemptToLoadGhostNote()
 
         return self.notes[uid]
 

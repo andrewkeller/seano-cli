@@ -12,6 +12,7 @@ from pyseano.utils import SeanoFatalError
 import argparse
 import logging
 import os
+import re
 import sys
 
 log = logging.getLogger(__name__)
@@ -63,6 +64,58 @@ def main():
                                 'on a pattern.  The pattern may be the beginning of a note ID, or it may be a ' +
                                 'commit ID or range in the underlying repository, from which we auto-detect added ' +
                                 'notes.')
+
+    def repo_spec(value):
+        key_pattern = '[a-zA-Z0-9_-]+'
+        pattern = '^(?P<key>' + key_pattern + r'):(?P<path>.+)$'
+        m = re.search(pattern, value)
+        if not m:
+            raise argparse.ArgumentTypeError('\n'.join([
+                'invalid argument: "%s"' % (value,),
+                '',
+                'Hint: repo_spec values must be in the form "key:value", where:',
+                '    key ~ /^' + key_pattern + '$/',
+                '    value is a path to a directory whence we can search for another seano database',
+            ]))
+        return m.group('key'), m.group('path')
+
+    subparser = subparsers.add_parser('import', help='Imports notes from an external seano database',
+                                      description='Imports notes from an external seano database.  ' +
+                                      'From an architecture point of view, seano does not support ' +
+                                      'submodules directly, because we need to be able to access a ' +
+                                      'unified commit graph of the history of all the notes, which ' +
+                                      'is unnecessarily difficult when multiple repositories are ' +
+                                      'involved.  As a compromise, seano can import notes from another ' +
+                                      'seano database into the local seano database, enabling them to ' +
+                                      'be tracked in the same SCM system as the local seano database ' +
+                                      '(because everything is in the same SCM system).  When notes ' +
+                                      'are imported, a path-safe, shell-safe, semi-permanent identifier ' +
+                                      'is required for each external database.  This identifier is used ' +
+                                      'to identify the origin of the note, and with that knowledge, ' +
+                                      'identify when an external database has *deleted* a note.  Thus, ' +
+                                      'this command can (a) import new notes, (b) update modified notes, ' +
+                                      'and (c) delete deleted notes.')
+    subparser.set_defaults(func=import_from_submodules)
+    add_db_args(subparser)
+    subparser.add_argument('--dry-run', action='store_true', dest='is_dry_run', default=False,
+                           help='Describe modifications that would be made, and do not modify any files on disk')
+    subparser.add_argument(nargs='+', dest='db_defs', type=repo_spec, help='Accumulator')
+
+    subparser = subparsers.add_parser('ghost', help='Mark certain notes as ghosts',
+                                      description='Marks notes as ghosts.  Ghost notes are real notes, ' +
+                                      'but do not show up in queries.  Ghost notes are useful when you ' +
+                                      'initially hook up a new submodule, and you don\'t want the full ' +
+                                      'database of all notes in the submodule (which likely represent ' +
+                                      'multiple releases!) to show up on your product\'s current release ' +
+                                      'as "changes".  Once you declare a note as a ghost, you don\'t have ' +
+                                      'to repeatedly keep declaring a note as a ghost on subsequent imports ' +
+                                      'from that submodule.')
+    subparser.set_defaults(func=mark_as_ghost)
+    add_db_args(subparser)
+    subparser.add_argument('--dry-run', action='store_true', dest='is_dry_run', default=False,
+                           help='Describe modifications that would be made, and do not modify any files on disk')
+    subparser.add_argument('--extern-id', action='store', required=True,
+                           help='Matches all notes that are associated with the given extern identifier')
 
     subparser = subparsers.add_parser('hash', help='Returns an arbitrary string that changes with all database '+
                                       'modifications; used by build systems to properly support incremental builds')
