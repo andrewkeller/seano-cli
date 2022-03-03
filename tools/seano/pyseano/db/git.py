@@ -64,6 +64,13 @@ class GitSeanoDatabase(GenericSeanoDatabase):
         h_inputs.append(self.config)
         return h_data(*h_inputs)
 
+    def import_extern_note(self, extern_note_file, extern_identifier, is_dry_run):
+        status = super(GitSeanoDatabase, self).import_extern_note(extern_note_file, extern_identifier, is_dry_run)
+        # status is a tuple of (A|M|D, path)
+        if status and not is_dry_run and status[0] == 'A':
+            subprocess.check_call(['git', 'add', '-N', status[1]])
+        return status
+
     def make_new_note(self):
         filename = super(GitSeanoDatabase, self).make_new_note()
         subprocess.check_call(['git', 'add', '-N', filename])

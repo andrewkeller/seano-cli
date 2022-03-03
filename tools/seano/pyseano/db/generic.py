@@ -73,18 +73,25 @@ class GenericSeanoDatabase(object):
         '''
         The uid of any note file is:
 
-        1. its relative path from inside ``self.db_objs``
-        2. with the file extension hacked off the end
+        1. its relative path from inside the SEANO_DB_SUBDIR folder
+        2. with the file extension(s) hacked off the end
         3. and all slashes removed
 
         Invoking this function with any file that is not a "proper" note file for the
         seano database currently referenced by this database object results in undefined
         behavior.
         '''
-        result = os.path.relpath(filename, self.db_objs) # [1]
-        result = os.path.splitext(result)[0] # [2]
-        result = result.replace('/', '') # [3]
-        result = result.replace('\\', '') # [3]
+        result = os.path.basename(filename)
+        result = os.path.splitext(result)[0] # [2]  .yaml
+        result = os.path.splitext(result)[0] # [2]  .extern-xxxx (if exists)
+
+        while True:
+            filename = os.path.dirname(filename) # [1]
+            component = os.path.basename(filename) # [1]
+            if component == SEANO_DB_SUBDIR: break # [3]
+            if not component: raise SeanoFatalError('Attempt to operate on a note file not inside a seano database')
+            result = component + result # [3]
+
         return result
 
     def get_seano_note_template_contents(self):
@@ -100,6 +107,228 @@ class GenericSeanoDatabase(object):
 
         # And we're done.  This is the official note template.
         return result
+
+    def import_extern_notes(self, is_dry_run, db_defs):
+        if not db_defs:
+            return [] # No local paths updated
+
+        # Ensure that the list of extern IDs is unique:
+        if len(set([id for id, _ in db_defs])) != len(db_defs):
+            raise SeanoFatalError('List of extern IDs is not unique.')
+
+        # Ensure that the list of extern databases is unique:
+        if len(set([self.path] + [db_path for _, db_path in db_defs])) != len(db_defs) + 1:
+            raise SeanoFatalError('List of extern database paths is not unique.')
+
+        # Construct a list of all full note file extensions we're looking for.
+        # These file extensions will be used to identify extraneous notes.
+        # In particular, we are NOT assuming that the db_defs list is the full
+        # list of all extern modules that exist, which means that NOT all
+        # extern notes are candidates for deletion.  (For example, if a
+        # submodule was deleted, we want to explicitly keep those notes.)
+        extensions_by_id = {
+            id: SEANO_EXTERN_NOTE_EXTENSION_PREFIX + id + SEANO_NOTE_EXTENSION
+            for id, _ in db_defs
+        }
+
+        # Build up a list of note IDs that are candidates for deletion, and
+        # also a list of all the extern identifiers that are currently active:
+        extraneous = {}
+        extern_id_used_previously = {}
+        for root, directories, filenames in os.walk(self.db_objs):
+            for f in filenames:
+                for id, ext in extensions_by_id.items():
+                    if f.endswith(ext):
+                        note_path = os.path.join(root, f)
+                        extraneous[self.extract_uid_from_filename(note_path)] = note_path
+                        extern_id_used_previously[id] = True
+                        break
+
+        # Build up a list of remote paths that need to be copied.
+        # And for each of these paths, remove them from `extraneous`.
+        todo = []
+        extern_id_now_used = {}
+        for other_db_id, other_db_dir in db_defs:
+            other_db_objs = os.path.join(other_db_dir, SEANO_DB_SUBDIR)
+            for root, directories, filenames in os.walk(other_db_objs):
+                for f in filenames:
+                    if f.endswith(SEANO_NOTE_EXTENSION) and SEANO_EXTERN_NOTE_EXTENSION_PREFIX not in f:
+                        full_path = os.path.join(root, f)
+                        todo.append((full_path, other_db_id))
+                        extern_id_now_used[other_db_id] = True
+
+                        # Oh, and don't delete these files:
+                        extraneous[self.extract_uid_from_filename(full_path)] = False
+
+        # Flatten extraneous:
+        extraneous = [v for _, v in extraneous.items() if v]
+
+        # Mine used ids for newly used ids:
+        new_extern_identifiers = [
+            (id, db_path)
+            for id, db_path in db_defs
+            if id in extern_id_now_used and id not in extern_id_used_previously
+        ]
+
+        touched_files = []
+
+        # Import each of the discovered files:
+        for f, id in todo:
+            touched_files.append(self.import_extern_note(f, id, is_dry_run))
+
+        # Delete each extraneous note:
+        for f in extraneous:
+            touched_files.append(self.delete_note(f, is_dry_run=is_dry_run))
+
+        if new_extern_identifiers:
+            sys.stderr.write('''
+NOTICE: It looks like you're importing notes from one or more
+extern seano databases for the first time.
+
+    - If you want all of these notes to show up as current changes
+      in the current version of your project, then you have nothing
+      to do.  Carry on.
+
+    - If some of these notes are not relevant to the current version
+      of your project, you may want to consider ghosting some or all
+      of these notes so that they don't show up as changes in the
+      current version of your project.
+''')
+            for id, db_path in new_extern_identifiers:
+                sys.stderr.write('''
+To ghost all currently imported notes from %s, run:
+
+    seano ghost --extern-id %s
+''' % (os.path.relpath(db_path), id))
+
+            sys.stderr.write('''
+Ghosting notes now does not impact any notes imported in the future.
+''')
+
+        # Return a list of all touched files:
+        return [x for x in touched_files if x]
+
+    def import_extern_note(self, extern_note_file, extern_identifier, is_dry_run):
+        # Construct the file path where the imported note will live:
+        id = self.extract_uid_from_filename(extern_note_file)
+        local_path = self.make_note_filename_from_uid(id)
+        local_path = os.path.splitext(local_path)
+        local_path = (SEANO_EXTERN_NOTE_EXTENSION_PREFIX + extern_identifier).join(local_path)
+
+        meta = {}
+        status = 'A'
+
+        if os.path.exists(local_path):
+            # We already have a copy of the note on disk.
+            # Load its extern metadata (the first hunk in the YAML):
+            status = 'M'
+
+            def load_extern_meta():
+                with open(local_path, 'r', **FILE_ENCODING_KWARGS) as f:
+                    for d in yaml.load_all(f, Loader=yaml.FullLoader):
+                        # Skip over any empty sections
+                        if not d: continue
+                        # Return the first non-empty section:
+                        return d
+            meta = load_extern_meta()
+
+            # If this is a ghost note, then do not overwrite it:
+            if meta.get(SEANO_NOTE_KEY_IS_GHOST, False):
+                log.debug('Importing %s: already imported as a ghost', extern_note_file)
+                return None
+
+        with open(extern_note_file, 'r', **FILE_ENCODING_KWARGS) as f:
+            data = f.read()
+
+        old_data_hash = meta.get(SEANO_NOTE_KEY_SHA1_OF_ORIGINAL_NOTE)
+        if old_data_hash:
+            if old_data_hash == h_data(data):
+                log.debug('Importing %s: already imported and up-to-date', extern_note_file)
+                return None
+
+        if is_dry_run:
+            log.info('Would import %s', extern_note_file)
+            return status, local_path
+
+        log.debug('Importing %s', extern_note_file)
+        write_existing_file(local_path, '\n'.join([
+            '---',
+            '%s: %s' % (
+                SEANO_NOTE_KEY_RELPATH_TO_ORIGINAL_NOTE,
+                os.path.relpath(extern_note_file, self.path).replace('\\', '/'),
+            ),
+            '%s: %s' % (
+                SEANO_NOTE_KEY_SHA1_OF_ORIGINAL_NOTE,
+                h_data(data),
+            ),
+            '',
+            '######## NOTICE ########',
+            '# This note is a *copy* of a note from an external database.',
+            '# You probably want to edit the original rather than this',
+            '# copy, so that other projects inherit your change.',
+            data,
+        ]))
+
+        return status, local_path
+
+    def delete_note(self, note_file, is_dry_run):
+        if is_dry_run:
+            log.info('Would delete %s', note_file)
+            return 'D', note_file
+        try:
+            os.remove(note_file)
+            return 'D', note_file
+        except FileNotFoundError:
+            pass
+        return None
+
+    def mark_all_notes_as_ghosts(self, is_dry_run, extern_id):
+
+        # How are we identifying the notes we want to ghost?
+        extension = SEANO_EXTERN_NOTE_EXTENSION_PREFIX + extern_id + SEANO_NOTE_EXTENSION
+
+        # Identify all notes to ghost, and ghost them:
+        results = []
+        for root, directories, filenames in os.walk(self.db_objs):
+            for f in filenames:
+                if f.endswith(extension):
+                    results.append(self.ghost_note(os.path.join(root, f), is_dry_run))
+
+        # Return a list of all touched files:
+        return [x for x in results if x]
+
+    def ghost_note(self, note_file, is_dry_run):
+
+        def load_extern_meta(path):
+            with open(path, 'r', **FILE_ENCODING_KWARGS) as f:
+                for d in yaml.load_all(f, Loader=yaml.FullLoader):
+                    # Skip over any empty sections
+                    if not d: continue
+                    # Return the first non-empty section:
+                    return d
+        meta = load_extern_meta(note_file)
+
+        if meta.get(SEANO_NOTE_KEY_IS_GHOST, False):
+            log.info('Is already a ghost: %s', note_file)
+            return None
+
+        if is_dry_run:
+            log.info('Would ghost: %s', note_file)
+            return 'M', note_file
+
+        write_existing_file(note_file, '\n'.join([
+            '---',
+            ] + [x for x in ['%s: %s' % (
+                SEANO_NOTE_KEY_RELPATH_TO_ORIGINAL_NOTE,
+                meta[SEANO_NOTE_KEY_RELPATH_TO_ORIGINAL_NOTE],
+            )] if SEANO_NOTE_KEY_RELPATH_TO_ORIGINAL_NOTE in meta] + [
+            '%s: true' % (
+                SEANO_NOTE_KEY_IS_GHOST,
+            ),
+            '',
+        ]))
+
+        return 'M', note_file
 
     def make_new_note(self):
         filename = self.make_new_note_filename()
