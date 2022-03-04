@@ -45,7 +45,7 @@ def follow_dot_seano_file(dot_seano_file):
 def find_seano_database(db_search_seed_path):
     dot_seano_file = locate_dot_seano_file(seed_path=db_search_seed_path or '')
     if not dot_seano_file:
-        raise SeanoFatalError('Unable to find a seano database.  Do you need to run `seano init`?')
+        raise SeanoFatalError('Unable to find a seano database starting from `%s`.  Do you need to run `seano init`?' % (db_search_seed_path or '',))
     db_path = follow_dot_seano_file(dot_seano_file)
     if not db_path:
         raise SeanoFatalError('Unable to read %s (unknown problem)' % (dot_seano_file,))
