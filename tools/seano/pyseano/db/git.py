@@ -49,7 +49,7 @@ class GitSeanoDatabase(GenericSeanoDatabase):
         if 0 != subprocess.call(['git', 'diff', '--cached', '--quiet', '--',
                                  os.path.relpath(self.path, self.repo)], cwd=self.repo): return True
         # This may very well be a valid Seano database of some kind, but it cannot be a GitSeanoDatabase.
-        log.info('It looks like no files exist where the database is supposed to be')
+        log.info('It looks like no files exist where the database is supposed to be (%s)', self.path)
         return False
 
     def incrementalHash(self):

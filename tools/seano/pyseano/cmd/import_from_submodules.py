@@ -12,7 +12,7 @@ import os
 import sys
 
 
-def import_from_submodules(db_search_seed_path, is_dry_run, db_defs):
+def import_from_submodules(db_search_seed_path, is_dry_run, assert_no_change, db_defs):
     db = find_and_open_seano_database(db_search_seed_path)
 
     # Check for overlapping databases:
@@ -61,3 +61,6 @@ def import_from_submodules(db_search_seed_path, is_dry_run, db_defs):
             'Please review the changes and commit them.',
             '',
         ]))
+
+        if assert_no_change:
+            sys.exit(1)

@@ -99,6 +99,9 @@ def main():
     add_db_args(subparser)
     subparser.add_argument('--dry-run', action='store_true', dest='is_dry_run', default=False,
                            help='Describe modifications that would be made, and do not modify any files on disk')
+    subparser.add_argument('--assert-no-change', action='store_true', default=False,
+                           help='If the import made changes in the local database, or would have made ' +
+                           'changes and --dry-run was specified, exit with a non-zero exit code.')
     subparser.add_argument(nargs='+', dest='db_defs', type=repo_spec, help='Accumulator')
 
     subparser = subparsers.add_parser('ghost', help='Mark certain notes as ghosts',
