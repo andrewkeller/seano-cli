@@ -120,7 +120,18 @@ def main():
     subparser = subparsers.add_parser('hash', help='Returns an arbitrary string that changes with all database '+
                                       'modifications; used by build systems to properly support incremental builds')
     subparser.set_defaults(func=hash_release_notes_db)
-    add_db_args(subparser, True)
+    subparser.add_argument('--config-annex', action='store', metavar='PATH', dest='config_annex_path',
+                           help='After loading the main config file located inside the first provided seano database, ' +
+                           'also load the file located at this path and import all of the values.  The config annex ' +
+                           'is not loaded for any of the subsequently specified databases, which are assumed to be ' +
+                           'associated extern databases, such as submodules, which don\'t normally load the config ' +
+                           'annex.')
+    subparser.add_argument(nargs='*', dest='db_search_seed_paths', metavar='PATH', action='store', default=[],
+                           help='The path at which searching for a .seano file should start.  If no paths are ' +
+                           'specified, the current working directory is used.  If one path is specified, it is ' +
+                           'assumed to be the primary database, which may load a config annex, if provided.  ' +
+                           'If additional paths are provided, they are assumed to be associated extern databases, ' +
+                           'and are hashed in the order of the arguments.')
 
     subparser = subparsers.add_parser('query', help='Compiles release notes from the given database')
     subparser.set_defaults(func=query_release_notes)
