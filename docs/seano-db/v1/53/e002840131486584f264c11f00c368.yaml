@@ -1,0 +1,225 @@
+---
+risk: low
+
+employee-short-loc-hlist-rst:
+  en-US:
+  - Teach ``seano`` how to import notes from submodules
+
+employee-technical-loc-rst:
+  en-US: |
+    ``seano`` now "supports" submodules.
+
+    Okay, that's a bit of an oversimplification.  ``seano`` *can't* support
+    submodules, because ``seano`` does not have visibility into how Zarf's
+    Icebox configuration exists on-disk (it doesn't understand Python files),
+    and thus cannot see the history of the submodule references, and thus
+    cannot automatically deduce which notes should be placed in which releases.
+    You can imagine how it might be at least possible if we were using Git
+    Submodules, because those can be mined — but it would still be a tremendous
+    amount of effort to get it working, and you still have unresolvable edge
+    cases such as historical notes disappearing when you delete a submodule.
+
+    As a *significantly cheaper* and interestingly *more reliable* alternative
+    solution, every time we update a submodule reference, we copy the new set
+    of notes from the submodule's ``seano`` database into the top-level
+    project's ``seano`` database, and commit those notes.  At that point, we can
+    perform a normal query of the ``seano`` database in the top-level project,
+    happily ignoring the reality that some of the notes originally came from
+    submodules.  Submodules can even be deleted, and we never lose historical
+    release notes.
+
+    That's pretty much the entire story in a nutshell.  Now, let's cover some
+    of the technical details.
+
+    #. First, there's a breaking change I should mention.  Zarf is no longer
+       responsible for telling ``seano`` where its database is.  Instead, Zarf
+       tells ``seano`` where to start looking for a database, and ``seano`` looks
+       for a special ``.seano`` file, which contains the relative path to the
+       actual database on disk.  This has these effects:
+
+       #. Existing projects that use ``seano`` need to re-run ``seano init`` so
+          that the ``.seano`` file gets created.  Failure to do so will result
+          in new versions of ``seano`` not detecting your existing database at
+          all.
+
+       #. Commands that you'd expect to be project-local, such as ``seano new``,
+          now actually are!  If a submodule named ``foo`` contains a ``seano``
+          database, and the CWD of your shell is somewhere inside ``foo``, then
+          ``seano new`` will create a new note inside ``foo``'s database, and
+          you even correctly get ``foo``'s note template.
+
+       #. Submodules are free to place their ``seano`` databases wherever they
+          want without fear of breaking top-level projects, because the only
+          requirement now is that the database is pointed to by a ``.seano``
+          file at the top of the submodule.  Put another way, ``./docs/seano-db``
+          is no longer a magic path that you can't move or have to memorize!
+
+       #. ``seano`` is now more cleanly disconnected from Zarf than it used to
+          be, which I believe makes ``seano``'s ecosystem easier for new
+          developers to learn.
+
+    #. Second, let's talk about how the newly added syncing process works.
+       I said earlier that notes are imported from submodules when we update
+       a submodule reference; this is misleading, at best.  It's more accurate
+       to say that notes are imported on every (Zarf) project build,
+       immediately prior to when Zarf runs ``seano query``.  The reasons for
+       this are:
+
+       #. Edits to notes in submodules are immediately reflected in built
+          documentation products without any fuss.
+
+       #. Submodule references are just text in the top-level ``wscript`` file,
+          so there's actually no way to automatically do the sync at that time,
+          anyways.
+
+       #. The sync process is surprisingly fast, so it's not painful to perform
+          it on every build.
+
+       The sync process is broken up into 3 distinct layers:
+
+       #. The Zarf Icebox, which accepts configurations via a new
+          ``seano_db_identifier`` parameter, which some specific kinds of
+          Icebox modules accept.
+       #. Zarf's ``seano`` module, owns knowledge of which submodules exist,
+          and is responsible for deciding when to trigger a sync.
+       #. ``seano import`` — a new subcommand in the previously existing
+          ``seano`` tool that performs an import of notes from a given list of
+          one or more external databases.
+
+       Zarf's Icebox assumes that both kinds of Git clone-based Icebox modules
+       may contain a ``seano`` database, and it donates that knowledge to Zarf's
+       ``seano`` module.  This ability is opt-out; to tell Zarf that a submodule
+       should explicitly not be considered for the possibility of having a
+       ``seano`` database, pass ``seano_db_identifier=None`` as a parameter to
+       the Icebox definition.
+
+       I'm not sold that Zarf's ``seano`` module is the correct place to own the
+       knowledge of which extern ``seano`` databases exist, however I think it's
+       a less bad decision than the Zarf Icebox or ``seano`` itself:
+
+       #. The Zarf Icebox is too specific of a system to reasonably own the
+          list of ``seano``'s extern databases.  For example, say you're using
+          another system to checkout submodules.  Do you just not get to import
+          notes from extern databases, then?  (I hope not)
+
+          There's no reason the Zarf Icebox can't be a UI to accept
+          configurations, and forward the configurations to whoever does own
+          it, though.  (And that's how it works in this implementation)
+
+       #. It doesn't make sense to trigger a sync from within an extern
+          database, because the extern database's extern databases are almost
+          certainly not checked out on disk (instead, the top-level project's
+          dependencies are!).  However, new in this release, the ``seano`` tool
+          now automatically identifies the "current" ``seano`` database based on
+          your shell's CWD, which can easily resolve to an extern (i.e., not
+          top-level) database.  Performing the import at that point would not
+          do what the user expects.  Because it shouldn't be easy accidentally
+          use things incorrectly, this suggests that ``seano`` should not own
+          the list of extern databases.
+
+          There's no reason that ``seano`` can't have a low-level import
+          function that requires you to give it the full definitions to all
+          extern databases, though.  (And that's how it works in this
+          implementation)
+
+       Here is an example of a sync sequence, end-to-end:
+
+       #. During ``waf configure``, Zarf sees that one of the active Icebox
+          definitions has does NOT have ``seano_db_identifier`` explicitly set
+          to ``None``.
+       #. The Icebox module donates knowledge of the extern database to Zarf's
+          ``seano`` module.
+       #. During ``waf [build]``, a QA Notes view was requested.
+       #. The QA Notes view requests a ``seano`` database dump.
+       #. Zarf invokes ``seano import``, and specifies the full list of all
+          donated extern database identifiers and paths.
+       #. If files were modified, the user is told on the command-line to
+          review and commit the changes
+       #. If ``--official`` was passed to ``waf configure`` AND some notes were
+          imported, the build fails (and stops) at this point.  Else, the build
+          continues: first the ``seano`` database dump (which may include newly
+          imported notes), and then any downstream view compilation tasks.
+
+    #. Third, let's talk about how imported notes look.  Imported notes are
+       given some (but not much) special treatment.  For example, from the
+       point of view of ``seano query``, all note files are the same.  However,
+       ``seano import`` is a little clever.  In particular:
+
+       #. Imported notes have a special file extension: ``.extern-<id>.yaml``.
+          The ID is used to identify which submodule the note came from without
+          needing to read and parse the file.
+       #. Imported notes have additional machine-readable metadata prepended
+          to them to help ``seano import`` with incremental import operations.
+       #. After the aforementioned metadata, imported notes contain a full copy
+          of the entire original note.  (Except ghosts, which are mostly empty)
+       #. ``seano import`` never imports imported notes (i.e., importing is
+          explicitly not recursive, just like the Zarf Icebox).
+
+       I considered putting imported notes in a different directory than the
+       local notes, but I decided that that made other parts of ``seano`` more
+       complicated than with the special file extension approach.
+
+       I considered not making imported notes have any special file extension
+       at all, but I didn't want ``seano import`` to open and read literally
+       every note only to get a list of the previously existing existing extern
+       notes and where they came from, because that sounds too expensive.
+
+       I considered dropping support for mirroring deleted notes from a
+       submodule to the top-level project, because that completely eliminates
+       the need to identify previously existing extern notes, simplifying a lot
+       of things in the process.  I decided that automatically mirroring
+       deleted notes is important enough of a feature to be worth the effort to
+       support.  Secondarily, humans are likely to be very bad at mirroring
+       deleted notes if they had to do it manually, further suggesting that it
+       should be automatic.
+
+       A new type of note called a "ghost" now exists.  Ghost notes are
+       identified by a special key-value pair inside the note file.
+       ``seano import`` knows to never overwrite a ghost with the original
+       (real) note during an import.  ``seano query`` knows to never include
+       a ghost in the results of a query.  Ghost notes are used to declare
+       that a note should not be used in the top-level project, but has been
+       "successfully" imported.  The typical use case is when a project adds
+       a submodule that has already been using ``seano`` for a time, and you
+       don't want the past notes to show up in the current project release
+       as "changes".  When you import notes from any extern database for the
+       first time, ``seano`` prints a blurb reminding you that you may want to
+       ghost some of the notes, and an example command that does it.
+
+    #. Lastly, let's talk about user experience details not already covered in
+       ``docs/seanoQuickstart.rst``.
+
+       Ideally, ``seano edit`` should automatically open the original copy of a
+       note whenever possible.  However, I'm a little unsure about the UX
+       details, and this ability can be added later without major surgery.
+
+       We're eventually going to want the ability to have platform-specific
+       notes.  I'm deliberately procrastinating on this goal because I think
+       that ghosting notes is already a reasonable first pass, although it is
+       a manual process.  Engineering a predicate system of some kind to pick
+       and choose notes per-project is possible, but expensive, and I'd rather
+       not go that way if we don't need to.  If ghosting notes is indeed good
+       enough, then we should consider teaching ``seano ghost`` to accept
+       individual note files at a time, rather than always operating on all
+       existing notes from an entire submodule (identified by its submodule
+       ID).
+
+qa-technical-loc-rst:
+  en-US: |
+    Regressions here are most likely going to manifest as developer headaches
+    prior to QA, rather than observable problems with built products sent to
+    QA.  However, it's not completely impossible for problems to show up in QA.
+    Some things that come to mind are:
+
+    #. If this project uses QA Notes, we should keep an eye out for any notes
+       being out-of-place, or missing.
+
+    #. If this project uses automatically generated Confluence documentation,
+       we should keep an eye out for any notes being out-of-place, or missing.
+
+    #. The CE Mac Client in particular gets its public release notes (which are
+       embedded in the app) from ``seano``.  We should make sure that
+       there are no missing, and no extra release notes.
+
+    #. Besides the Mac Client's embedded release notes, there is zero
+       customer-facing risk.
