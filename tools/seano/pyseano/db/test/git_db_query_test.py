@@ -3,7 +3,7 @@
 # Automated unit tests for the GitSeanoDatabase class
 #   - in particular, the behavior related to querying a database
 from ..git import GitSeanoDatabase
-from ...utils import SeanoFatalError, coerce_to_str
+from ...utils import SeanoFatalError, coerce_to_str, write_existing_file
 import errno
 import os
 import shutil
@@ -15,26 +15,10 @@ import unittest
 
 shcall = subprocess.check_call
 mkdir = os.mkdir
+putfile = write_existing_file
 
 def shgeto(*args, **kwargs):
     return coerce_to_str(subprocess.check_output(*args, **kwargs).strip())
-
-def putfile(path, data):
-    '''
-    ABK: Not using ``seano``'s copy of ``write_file()`` because we want to be able to overwrite existing
-         files, which ``write_file()`` forbids.  Other than that detail, this function is nearly identical
-         to ``seano``'s ``write_file()`` method.
-    '''
-    try:
-        with open(path, 'w') as f:
-            f.write(data)
-            return
-    except IOError as e:
-        if e.errno != errno.ENOENT:
-            raise
-    os.makedirs(os.path.dirname(path))
-    with open(path, 'w') as f:
-        f.write(data)
 
 def rmrf(workdir):
     def on_error(func, path, exc_info): #pylint: disable=W0613

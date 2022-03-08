@@ -11,7 +11,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(__file__, '..', '..', '..', '..', '..')))
 
 import logging
-from pyseano.utils import SeanoFatalError
+from pyseano.utils import SeanoFatalError, FILE_ENCODING_KWARGS
 from support.seano.views.ce_sphinx_1 import compile_seano_ce_sphinx_1
 from support.seano.views.qa_notes import compile_qa_notes
 from support.seano.views.wiki_latest_releases import compile_confluence_latest_releases
@@ -59,5 +59,5 @@ def format_query_output(src, format, out):
         sys.stdout.write(outdata)
         return
 
-    with open(out, 'w') as f:
+    with open(out, 'w', **FILE_ENCODING_KWARGS) as f:
         f.write(outdata)
