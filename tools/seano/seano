@@ -164,8 +164,13 @@ def main():
     log.debug('Arguments: %s', ns)
 
     kwargs = dict(vars(ns))
-    del kwargs['func']
-    del kwargs['verbose']
+    try:
+        del kwargs['func']
+        del kwargs['verbose']
+    except KeyError:
+        parser.print_help()
+        sys.exit(1)
+
     try:
         ns.func(**kwargs)
     except SeanoFatalError as e:
