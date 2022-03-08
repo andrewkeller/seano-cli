@@ -25,6 +25,6 @@ def query_release_notes(db_search_seed_path, out, **db_kwargs):
         print(data)
         return
 
-    with open(out, "w") as f:
+    with open(out, 'w', **FILE_ENCODING_KWARGS) as f:
         f.write(data)
         f.write('\n')
