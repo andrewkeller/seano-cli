@@ -55,10 +55,10 @@ seano_note_template_contents: |
       - which means you can nest bullets
       - but you sometimes have to quote whole lines to make YAML happy
 
-  # (Optional) Long-form technical discussion aimed at other developers:
   employee-technical-loc-rst:
     en-US: |
-      You are talking to developers on other teams.
+      (Optional) Long-form technical discussion aimed at developers on other
+      teams.
 
       This field is a single large reStructuredText blob.  It can be short,
       or it can be long.  Food for thought:
@@ -72,10 +72,10 @@ seano_note_template_contents: |
       #. What do your coworkers on other teams need to know to be able to
          make future changes in the affected code here?
 
-  # (Optional) Long-form technical discussion aimed at Member Care:
   mc-technical-loc-rst:
     en-US: |
-      You are talking to a Tier-2 Member Care Representative (a "T2").
+      (Optional) Long-form technical discussion aimed at our Tier-2 Member Care
+      Representatives (our T2's).
 
       This field is a single large reStructuredText blob.  It can be short,
       or it can be long.  Food for thought:
@@ -95,10 +95,9 @@ seano_note_template_contents: |
          now.  What should MC do to manage the issue on their own before
          developers are available on Monday?
 
-  # (Required) Long-form technical discussion aimed at QA:
   qa-technical-loc-rst:
     en-US: |
-      You are talking to QA.
+      (Required) Long-form technical discussion aimed at QA.
 
       This field is a single large reStructuredText blob.  It can be short,
       or it can be long.  Food for thought:
