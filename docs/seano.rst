@@ -58,9 +58,6 @@ Upon initial investigation, `Reno <https://docs.openstack.org/reno/latest/>`_ an
 submodule and output file type support.  Since neither system is really that complex, it seemed easiest to start a new
 system from scratch that does exactly what we need.
 
-This version of ``seano`` doesn't support submodules yet, but the correct groundwork is already in place to move in
-that direction when it gets prioritized.
-
 
 Concept
 -------
