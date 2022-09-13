@@ -12,6 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(__file__, '..', '..', '..', '..', '
 
 import logging
 from pyseano.utils import SeanoFatalError, FILE_ENCODING_KWARGS
+from support.seano.views.gha_summary_notes import compile_gha_summary_notes
 from support.seano.views.ce_sphinx_1 import compile_seano_ce_sphinx_1
 from support.seano.views.qa_notes import compile_qa_notes
 from support.seano.views.wiki_latest_releases import compile_confluence_latest_releases
@@ -23,6 +24,7 @@ log = logging.getLogger(__name__)
 
 format_functions = {
     'ce-sphinx-1': compile_seano_ce_sphinx_1,
+    'gha_summary_notes': compile_gha_summary_notes,
     'qa-notes': compile_qa_notes,
     'confluence_latest_releases': compile_confluence_latest_releases,
     'confluence_mc_notes': compile_confluence_mc_notes,
