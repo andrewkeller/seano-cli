@@ -117,8 +117,12 @@ def main():
     add_db_args(subparser)
     subparser.add_argument('--dry-run', action='store_true', dest='is_dry_run', default=False,
                            help='Describe modifications that would be made, and do not modify any files on disk')
-    subparser.add_argument('--extern-id', action='store', required=True,
+    subparser.add_argument('--extern-id', action='append', default=[], dest='extern_ids',
                            help='Matches all notes that are associated with the given extern identifier')
+    subparser.add_argument('patterns', metavar='PATTERN', nargs='*', default=[],
+                           help='Search for notes based on a pattern.  The pattern may be the beginning of a '
+                           'note ID, or it may be a commit ID or range in the underlying repository, from '
+                           'which we auto-detect added notes.')
 
     subparser = subparsers.add_parser('hash', help='Returns an arbitrary string that changes with all database '+
                                       'modifications; used by build systems to properly support incremental builds')
