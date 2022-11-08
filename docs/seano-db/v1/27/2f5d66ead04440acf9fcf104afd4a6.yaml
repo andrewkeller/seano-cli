@@ -1,0 +1,30 @@
+---
+risk: low
+
+employee-short-loc-hlist-rst:
+  en-US:
+  - "``seano ghost`` can now ghost individual notes at a time"
+
+employee-technical-loc-rst:
+  en-US: |
+    ``seano ghost`` has been taught how to ghost individual notes at a
+    time, rather than always ghosting all notes from a given extern ID.  The
+    given note is a fuzzy search, just like ``seano edit`` supports.
+
+    Example::
+
+        seano ghost HEAD
+
+    *Ghost all notes created in the current Git commit.*
+
+    To implement this change, the ``--extern-id`` parameter is no longer
+    mandatory — and, it's also now an accumulator (you can use it zero or more
+    times).  Any parameter that is not preceeded by ``--extern-id`` is assumed
+    to be a fuzzy search.  The final set of notes to be ghosted is the union
+    of all sets notes identfied by each of the parameters.
+
+# Nothing to tell MC
+
+qa-technical-loc-rst:
+  en-US: |
+    Nothing to test (no changes to CE)

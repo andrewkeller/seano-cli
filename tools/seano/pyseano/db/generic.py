@@ -271,6 +271,17 @@ Ghosting notes now does not impact any notes imported in the future.
 
         return status, local_path
 
+    def get_notes_with_extern_id(self, extern_id):
+        # How do we identify notes with this extern ID?
+        extension = SEANO_EXTERN_NOTE_EXTENSION_PREFIX + extern_id + SEANO_NOTE_EXTENSION
+        # Go find them:
+        results = []
+        for root, directories, filenames in os.walk(self.db_objs):
+            for f in filenames:
+                if f.endswith(extension):
+                    results.append(os.path.join(root, f))
+        return results
+
     def delete_note(self, note_file, is_dry_run):
         if is_dry_run:
             log.info('Would delete %s', note_file)
@@ -281,21 +292,6 @@ Ghosting notes now does not impact any notes imported in the future.
         except FileNotFoundError:
             pass
         return None
-
-    def mark_all_notes_as_ghosts(self, is_dry_run, extern_id):
-
-        # How are we identifying the notes we want to ghost?
-        extension = SEANO_EXTERN_NOTE_EXTENSION_PREFIX + extern_id + SEANO_NOTE_EXTENSION
-
-        # Identify all notes to ghost, and ghost them:
-        results = []
-        for root, directories, filenames in os.walk(self.db_objs):
-            for f in filenames:
-                if f.endswith(extension):
-                    results.append(self.ghost_note(os.path.join(root, f), is_dry_run))
-
-        # Return a list of all touched files:
-        return [x for x in results if x]
 
     def ghost_note(self, note_file, is_dry_run):
 
@@ -320,7 +316,7 @@ Ghosting notes now does not impact any notes imported in the future.
             '---',
             ] + [x for x in ['%s: %s' % (
                 SEANO_NOTE_KEY_RELPATH_TO_ORIGINAL_NOTE,
-                meta[SEANO_NOTE_KEY_RELPATH_TO_ORIGINAL_NOTE],
+                meta.get(SEANO_NOTE_KEY_RELPATH_TO_ORIGINAL_NOTE),
             )] if SEANO_NOTE_KEY_RELPATH_TO_ORIGINAL_NOTE in meta] + [
             '%s: true' % (
                 SEANO_NOTE_KEY_IS_GHOST,
