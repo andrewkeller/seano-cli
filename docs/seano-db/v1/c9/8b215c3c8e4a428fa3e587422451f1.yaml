@@ -1,0 +1,46 @@
+---
+risk: low
+
+employee-short-loc-hlist-rst:
+  en-US:
+  - Polish Android support on Windows in Zarf
+
+employee-technical-loc-rst:
+  en-US: |
+    CI has been updated to build our 3 Android slices on Ubuntu, Windows, and
+    macOS builders, to prove that our Android support generally works on those
+    platforms.
+
+    Getting it to work on Windows took some minor changes, hence this note.
+    In particular:
+
+    #.  The logic that unzips the Android NDK was updated to not print thousands
+        of lines of text to the console.
+
+    #.  The logic that invokes ``seano`` in Zarf was updated to reference the
+        ``python`` executable via ``sys.executable`` rather than ``"python"``,
+        to workaround an issue where the nested invocation of Python escaped
+        the virtual environment, losing all of the installed modules.
+
+        Excerpt from https://bugs.python.org/issue42041:
+
+            This is due to how Windows resolves relative paths when creating a
+            new process.  It *always* looks in the current application directory
+            first, which with this setup will be the original Python executable
+            rather than the venv redirector.
+
+        In theory, this problem is limited to any invocation of X from within X
+        (for example, invoking Python from within Python).  I briefly searched
+        for any other direct invocations of Python in Zarf, and did find some
+        other possible risk areas, but they are all in old parts of Zarf that
+        are due for a rewrite anyways (Python unit test infrastructure, for
+        example).
+
+    #.  A new style of writing cross-platform shell scripts in GHA has been
+        imported from Snowball, in preparation for turning on CI on Windows.
+
+# Nothing to tell MC
+
+qa-technical-loc-rst:
+  en-US: |
+    Nothing to test (only Linux is impacted)

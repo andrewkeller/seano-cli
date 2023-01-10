@@ -54,7 +54,7 @@ def invokeSeano(args, cwd):
     Considered just swallowing stdout, but we would like to see it to make sure
     it looks right.
     '''
-    p = subprocess.Popen(['python', os.path.abspath('seano')] + args,
+    p = subprocess.Popen([sys.executable, os.path.abspath('seano')] + args,
                          cwd=cwd,
                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output, _ = p.communicate()
