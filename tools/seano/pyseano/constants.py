@@ -147,31 +147,31 @@ SEANO_DB_SUBDIR = 'v1'
 SEANO_EXTERN_NOTE_EXTENSION_PREFIX = '.extern-'
 SEANO_NOTE_EXTENSION = '.yaml'
 SEANO_NOTE_DEFAULT_TEMPLATE_CONTENTS = '''---
-risk: One of low, medium, high; risk level does not factor in deployment tricks to lower risk.
+risk: One of low, medium, high; does not reflect deployment tricks to lower risk
 
 tickets:
-- URL to JIRA/Redmine ticket
+- URL to JIRA ticket
 
 min-supported-os:        # Only include this section if you changed the minimum supported OS
-  os1: "version number"  # You must specify all OSs every time you define a new value
+  os1: "version number"  # You must re-specify all supported OSs every time you change a value
   os2: "version number"  # OS versions should be quoted to avoid yaml assuming numeric type
 
 max-supported-os:        # Only include this section if you changed the maximum supported OS
-  os1: "version number"  # You must specify all OSs every time you define a new value
+  os1: "version number"  # You must re-specify all supported OSs every time you change a value
   os2: "version number"  # OS versions should be quoted to avoid yaml assuming numeric type
 
-employee-milestones-list-loc-rst:
+employee-milestones-list-loc-md:
 - en-US: Short description of a big change
 - en-US: Use sparingly, because these are printed prominently
 
-customer-short-loc-hlist-rst:
+customer-short-loc-hlist-md:
   en-US:
-  - Short sentence explaining this change to CE customers
+  - Short sentence explaining this change to customers
   - "This is an hlist, which means:":
     - you can express a hierarchy here
-  - This text usually comes from the ``#workroom-releasenotes`` channel in Slack
+  - This text usually comes from the `#workroom-releasenotes` channel in Slack
 
-employee-short-loc-hlist-rst:
+employee-short-loc-hlist-md:
   en-US:
   - Short sentence explaining this change to CE employees
   - "This is an hlist, which means:":
@@ -182,7 +182,7 @@ employee-short-loc-hlist-rst:
     - Don't crash when bacon is not loaded
     - You usually only need one line; these are just examples
 
-employee-technical-loc-rst:
+employee-technical-loc-md:
   en-US: |
     You are talking to your future self and Ops.
 
@@ -190,10 +190,10 @@ employee-technical-loc-rst:
     this solution?  What might go wrong?  What can Ops do to resolve an outage
     over the weekend?
 
-    This field is a single large reStructuredText blob.  Explaining details is
+    This field is a single large Markdown blob.  Explaining details is
     good.
 
-mc-technical-loc-rst:
+mc-technical-loc-md:
   en-US: |
     You are talking to a Tier-2 Member Care Representative.
 
@@ -208,32 +208,30 @@ mc-technical-loc-rst:
     so feel free to use technical jargon to shorten explanations.
 
     Don't be afraid to be terse; if a T2 has questions, they'll often hop over
-    to the ``employee-technical-loc-rst`` section to look for more details.
+    to the `employee-technical-loc-md` section to look for more details.
 
     Sometimes a screenshot is a great way to shorten an explanation:
 
-    .. image:: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cGF0aCBkPSJNNTAsMzBjOS0yMiA0Mi0yNCA0OCwwYzUsNDAtNDAsNDAtNDgsNjVjLTgtMjUtNTQtMjUtNDgtNjVjIDYtMjQgMzktMjIgNDgsMCB6IiBmaWxsPSIjRjAwIiBzdHJva2U9IiMwMDAiLz4KPC9zdmc+
-       :width: 100
-       :alt: red heart with black outline
+    <img width=100 alt="red heart with black outline" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cGF0aCBkPSJNNTAsMzBjOS0yMiA0Mi0yNCA0OCwwYzUsNDAtNDAsNDAtNDgsNjVjLTgtMjUtNTQtMjUtNDgtNjVjIDYtMjQgMzktMjIgNDgsMCB6IiBmaWxsPSIjRjAwIiBzdHJva2U9IiMwMDAiLz4KPC9zdmc+" />
 
     If what you want to write here is identical to what you've already written
     in another section, you can use Yaml's reference syntax to copy another
-    section.  You can copy any ``*-loc-rst`` field, or any ``*-loc-hlist-rst``
-    field.  Example:
+    section.  You can copy any `*-loc-md` field, or any `*-loc-hlist-md` field.
+    Example:
 
-    .. code-block:: yaml
+    ```yaml
+    employee-short-loc-hlist-md: &empl-short
+      en-US: #                   ^^^^^^^^^^^  Mark section to copy
+      - Hello, this is an internal release note
 
-       employee-short-loc-hlist-rst: &empl-short
-         en-US: #                    ^^^^^^^^^^^  Mark section to copy
-         - Hello, this is an internal release note
-
-       mc-technical-loc-rst: *empl-short
-       #                     ^^^^^^^^^^^  Copy contents of the marked section
+    mc-technical-loc-md: *empl-short
+    #                    ^^^^^^^^^^^  Copy contents of the marked section
+    ```
 
     If this change doesn't impact customers or Member Care, or is too obscure
     to mention, then delete this section.
 
-qa-technical-loc-rst:
+qa-technical-loc-md:
   en-US: |
     You are talking to QA.
 
@@ -243,11 +241,11 @@ qa-technical-loc-rst:
     QA uses this section to perform QA, and also as a "diff" to update their
     own test plan archives.
 
-    This field is a single large reStructuredText blob.  Explaining details is
-    good.  Assume that QA has zero knowledge of *what* to test, but that given
-    that knowledge, they know *how* to test it.  Be specific in descriptions;
-    avoid generalizations when practical.  Be as technical as you want.  If QA
-    has questions, they'll ask you.
+    This field is a single large Markdown blob.  Explaining details is good.
+    Assume that QA has zero knowledge of *what* to test, but that given that
+    knowledge, they know *how* to test it.  Be specific in descriptions;
+    avoid generalizations when practical.  Be as technical as you want.
+    If QA has questions, they'll ask you.
 '''
 
 # Generally speaking, notes in seano contain keys that are designed
