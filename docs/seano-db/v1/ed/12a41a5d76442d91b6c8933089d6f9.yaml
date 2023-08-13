@@ -1,0 +1,28 @@
+---
+risk: low
+
+employee-short-loc-hlist-md:
+  en-US:
+  - Change default markup language in `seano` notes to Markdown
+
+employee-technical-loc-md:
+  en-US: |
+    Usability testing indicated that developers want Markdown support enough
+    that they're willing to manually switch back to reStructuredText on a
+    per-section basis for now if they need syntax highlighted code blocks or
+    Mermaid diagrams.
+
+    Thus, the default markup type in new `seano` notes is now Markdown.
+
+    Just like before, projects may customize the `seano` note template.
+
+    To adopt this change, some projects may need to adjust their `seano` note
+    template substitutions.  To quickly check to see if your project may be
+    affected, search `docs/seano-db/seano-config.yaml` in your project for the
+    text `-rst`.  To test your project's `seano` note template without creating
+    a new `seano` note repeatedly, use `seano print-note-template`.
+
+qa-technical-loc-md:
+  en-US: |
+    All impact is within `seano new`.  If developers don't complain,
+    then we're good to go.
