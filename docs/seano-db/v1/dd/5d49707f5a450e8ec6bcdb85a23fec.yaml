@@ -1,0 +1,193 @@
+---
+risk: low
+
+employee-short-loc-hlist-md:
+  en-US:
+  - Allow Markdown in `seano` notes
+
+employee-technical-loc-md:
+  en-US: |
+    TL;DR: This is an upgrade to Zarf's stock `seano` views, and associated
+    shared view rendering infrastructure.  The only production impact is in
+    the Mac Client, where there is a release notes view embedded in the app.
+    `seano` itself did not change at all.
+
+    The only work required to adopt this change is that the top-level project
+    must update its `requirements.txt` file to include the new additions in
+    Zarf's `requirements.txt` file.  See the diff for specific details.
+
+    Overview of changes, in dependency order:
+
+    1.  **Offload a fairly large hunk of common view rendering code into a new
+        helper function**
+
+        A new helper function named `seano_read_hlist()` was added, which
+        automates the process of reading localized markup from a list of notes.
+        Previously, this logic lived inside each view.  The new helper function
+        accepts a list of notes, a priority list of keys to read, and a
+        priority list of localizations to accept, and it returns a single hlist
+        with all discovered data.  This function replaces `for` loops that
+        iterated over a list of notes, and hard-coded dictionary lookups for
+        single keys and single localizations.
+
+        `seano_read_hlist()` is not designed to read data that is not ultimately
+        some kind of container of markup; accessing such data still needs
+        custom logic in each view.
+
+        `seano_read_hlist()` treats both blobs and hlists as hlists.  This new,
+        weird behavior has some important side effects:
+
+        1.  It allows reading a single blob field from a list of notes, getting
+            a list of answers, using just one function call (like
+            `seano_cascade_hlist()` used to do for hlists, except that this
+            works for blob fields)
+
+        1.  It allows reading a single hlist field from a list of notes and
+            merging the results, like `seano_cascade_hlist()` used to do, using
+            just one function call
+
+        1.  It allows reading from a *priority list* of multiple keys from the
+            given list of notes *(i.e., first matching key wins for each
+            note)* using just one function call, allowing developers to
+            implement certain types of schema migrations (such as renamed
+            fields) with minimal impact to view code
+
+        1.  It allows reading from a *priority list* of localizations from the
+            given sections in the given notes *(i.e., first matching key wins
+            for each note)*, helping eliminate hard-coded logic that always
+            fetched `en-US` localizations *(institutionally, we don't use
+            multiple localizations yet, but at least it's a parameter now,
+            instead of being hard-coded everywhere)*
+
+        1.  It paves the way to *adding support* for Markdown without dropping
+            support for reStructuredText, by imbuing the markup language type
+            in the payload of each text hunk, so that when hlist structures are
+            merged, a single hlist tree may contain multiple markup types, and
+            views don't have to care
+
+    1.  **Changed how hlists are rendered in blob fields.**
+
+        To improve developer-friendliness of documentation, hlist values can
+        be used in fields that expect blobs.  (This is not new)  The use case
+        is that sometimes (for example), what you were going to write for
+        Member Care is identical to what you already wrote for the internal
+        notes, and it's nice to leverage YAML's reference-and-copy syntax to
+        copy the text you already wrote.  The complexity, however, is that an
+        hlist is not the same as a blob, so some data manipulation is required
+        to make the view work.
+
+        Previously, when a blob view was asked to render an hlist, a normal
+        hierarchical list was generated.  Although this was the obvious
+        implementation, it lead to a visual hierarchy problem in aggregate blob
+        views: when a hierarchical list exists, it visually looks like it's
+        associated with the paragraph preceding it; in aggregate blob views,
+        when multiple notes are concatenated together, it's easy to
+        accidentally have a hierarchical list after a paragraph.
+
+        Going forward, when an hlist is rendered in a blob section, the top
+        level of the hlist is now rendered as a series of paragraphs, and the
+        subsequent levels of the hlist are rendered as a normal hierarchical
+        list.  It is no longer possible to accidentally put a hierarchical list
+        after a paragraph in aggregate blob views.
+
+        A side effect of the specific implementation chosen is that blob
+        sections are no longer guaranteed to have blob values.  Previously, the
+        auto-conversion was done at the schema migration layer; any blob fields
+        that contained hlist values were auto-converted into a reStructuredText
+        blob that implemented a hierarchical list equivalent of the hlist.
+        Going forward, since both hlists and blobs are readable using
+        `seano_read_hlist()`, the schema migration has been dropped, and hlists
+        in blob fields are now read natively as hlists.  The view layer never
+        explicitly realizes that this happened; as far as it's concerned,
+        `seano_read_hlist()` returned an hlist tree, which it expects to be a
+        flat list of paragraph-ish hunks.  Upon iterating over those hunks,
+        however, it finds that one of those hunks has children, which are the
+        inner (non-root) layer of an hlist.  Consequently, views must be aware
+        that this is the behavior going forward: what you think is a list of
+        paragraph-ish hunks may actually be a literal hlist tree.  All of the
+        stock views in Zarf have been updated to this behavior.
+
+    1.  **Eliminate duplicate content in aggregate blob views**
+
+        *Aggregate blob views* are rarely used; this is probably because of
+        their sketchy visual hierarchy, secondary to aggregating blob fields
+        from multiple notes without any visual delimiters.  The only aggregate
+        blob view that exists today is what we colloquially call Member Care
+        Notes.
+
+        Previously, in aggregate blob views, we just pasted in the content from
+        each note, one after the other.  If anything repeated, then that
+        content was repeated.
+
+        Going forward, thanks to `seano_read_hlist()` treating everything as an
+        hlist, when an aggregate blob view is processed, any hunks that are an
+        exact duplicate of a prior hunk are removed.
+
+        Somewhat unfortunately, this does not operate on a per-paragraph basis;
+        rather, it operates on a per-node basis in the hlist tree — and if a
+        node happens to come from a blob field, then that node may contain
+        pretty much anything, such as multiple paragraphs.
+
+        The primary motivation for this change was to reduce complexity in
+        existing view logic, by allowing most schema read operations to be
+        handleable by `seano_read_hlist()`.
+
+        Secondarily, this change also means that hlists in aggregate blob
+        views merge just like they do for real hlist fields, which might be an
+        interesting feature.  It is unclear whether or not this behavior is
+        desirable at this point, but I do hope it's at least not harmful.
+
+    1.  **Added support for using Markdown in `seano` notes.**
+
+        In the beginning, all of the stock `seano` views used Markdown as their
+        markup language.  To improve compatibility with Sphinx, we switched to
+        reStructuredText.  Since it was believed that the markup language might
+        change again in the future, all of the section keys were renamed to
+        have a suffix identifying the markup language (`-rst`, specifically).
+        During that transition, all notes were manually migrated to
+        reStructuredText, which wasn't difficult, because literally everything
+        (`seano` itself, all the notes, and all the views) were all private
+        inside the Mac Client.
+
+        As it turns out, it was a good idea to rename the keys.
+
+        Going forward, all of the stock `seano` views now read from *both* the
+        Markdown and reStructuredText variants of their section keys.  For
+        example, internal notes are now pulled from either
+        `employee-short-loc-hlist-md` or `employee-short-loc-hlist-rst`
+        (whichever exists).  If both fields exist, the view chooses which copy
+        is used, by virtue of the order of the keys it told `seano_read_hlist()`
+        to read.
+
+        Since `seano_read_hlist()` imbues the markup type in each hlist node,
+        views do not need to know to use Markdown or reStructuredText at the
+        correct times.  Views need only ask the node to convert to HTML, and
+        the correct compiler is used automatically.  This allows old notes to
+        not need to be migrated to Markdown, which would be a tedious job,
+        since it involves now 10 repositories, some of which are now
+        deprecated.
+
+        This new implementation of Markdown support is rather basic, and is
+        designed at this point to "just exist".  Syntax highlighting in fenced
+        code blocks, and auto-conversion of Mermaid code blocks into Mermaid
+        diagrams, are not supported yet.  Support for those features will be
+        added in the future, without any breaking changes.  In fact, we're so
+        confident that there won't be any breaking changes that we think it's
+        okay to specify the language in all fenced code blocks, and eventually,
+        it will just work.  For Mermaid diagrams in particular, the language
+        will be `mermaid`.
+
+qa-technical-loc-md:
+  en-US: |
+    1.  (Mac Sensor Client only) Check the release notes text, present in the
+        DMG, the installer, and the CE Client, for any messed up sections, or
+        anything out-of-place or weird-looking.
+    1.  Check the QA Notes page for messed up sections, missing fields, and
+        broken links/buttons
+    1.  Perform a text diff of the old and new QA Notes pages to search for any
+        obscure irregularities (Andrew can help with this)
+    1.  Ask a developer to deploy release notes to Confluence
+    1.  Look at all of the updated pages on Confluence; check for messed up
+        sections, missing fields, and broken links
+    1.  Perform a text diff of the old and new Confluence pages to search for
+        any obscure irregularities (Andrew can help with this)
