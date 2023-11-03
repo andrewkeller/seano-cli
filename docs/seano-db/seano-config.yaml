@@ -55,6 +55,19 @@ seano_note_template_contents: |
       - which means you can nest bullets
       - but you sometimes have to quote whole lines to make YAML happy
 
+  employee-upgrade-loc-md:
+    en-US: |
+      (Optional) Long-form explanation of changes required for usages to adopt
+      this change, aimed at developers on other teams, and Ops.
+
+      This field is a single large Markdown blob.  It can be short, or it can be
+      long.  Food for thought:
+
+      1. What software needs to be installed on the system?
+      1. What are the new build parameters?
+      1. What functions were renamed or refactored?
+      1. What functions were deleted without a replacement?
+
   employee-technical-loc-md:
     en-US: |
       (Optional) Long-form technical discussion aimed at developers on other
