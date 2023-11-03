@@ -182,6 +182,18 @@ employee-short-loc-hlist-md:
     - Don't crash when bacon is not loaded
     - You usually only need one line; these are just examples
 
+employee-upgrade-loc-md:
+  en-US: |
+    You are talking to your coworkers on other teams, and Ops.
+
+    Explain what needs to be updated to adopt this change.  Although this
+    usually refers to breaking changes, certain new features may also be worth
+    mentioning, if the lack of using them causes headaches.
+
+    This field is a single large Markdown blob.
+
+    If no usages need updating, then delete this section.
+
 employee-technical-loc-md:
   en-US: |
     You are talking to your future self and Ops.
