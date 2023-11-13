@@ -1,7 +1,7 @@
 """
-pyseano/cmd/edit_note.py
+pyseano/cmd/list_notes.py
 
-Interactive command-line wrapper on top of the infrastructure that edits the latest added release note.
+Interactive command-line wrapper on top of the infrastructure that lists the latest added release notes.
 """
 
 from pyseano.db import *
@@ -10,8 +10,8 @@ from pyseano.utils import *
 log = logging.getLogger(__name__)
 
 
-# IMPROVE: This shares a lot with `list_latest_release_notes()`; should they be unified?
-def edit_latest_release_note(db_search_seed_path, include_wip, include_modified, patterns):
+# IMPROVE: This shares a lot with `edit_latest_release_note()`; should they be unified?
+def list_latest_release_notes(db_search_seed_path, include_wip, include_modified, include_ghosts, patterns):
     db = find_and_open_seano_database(db_search_seed_path)
     files = []
     # IMPROVE: In a Git-backed project, `most_recently_added_notes()` and `get_notes_matching_pattern()` are both
@@ -32,5 +32,6 @@ def edit_latest_release_note(db_search_seed_path, include_wip, include_modified,
     if not files:
         raise SeanoFatalError("Release notes database is empty")
     files = sorted(set(files))
-    log.debug("About to edit:\n    %s", "\n    ".join(files))
-    edit_files(files)
+    for f in files:
+        if include_ghosts or not db.is_ghost(f):
+            print(db.extract_uid_from_filename(f))

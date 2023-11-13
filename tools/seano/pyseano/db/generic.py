@@ -293,6 +293,14 @@ Ghosting notes now does not impact any notes imported in the future.
             pass
         return None
 
+    def is_ghost(self, note_file):
+        with open(note_file, 'r', **FILE_ENCODING_KWARGS) as f:
+            for d in yaml.load_all(f, Loader=yaml.FullLoader):
+                # Skip over any empty sections
+                if not d: continue
+                # Interrogate the first non-empty section:
+                return d.get(SEANO_NOTE_KEY_IS_GHOST, False)
+
     def ghost_note(self, note_file, is_dry_run):
 
         def load_extern_meta(path):
