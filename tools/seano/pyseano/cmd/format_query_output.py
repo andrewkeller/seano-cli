@@ -12,6 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(__file__, '..', '..', '..', '..', '
 
 import logging
 from pyseano.utils import SeanoFatalError, FILE_ENCODING_KWARGS
+from support.seano.views.gh_pr_description import compile_gh_pr_description
 from support.seano.views.gha_summary_notes import compile_gha_summary_notes
 from support.seano.views.ce_sphinx_1 import compile_seano_ce_sphinx_1
 from support.seano.views.qa_notes import compile_qa_notes
@@ -24,6 +25,7 @@ log = logging.getLogger(__name__)
 
 format_functions = {
     'ce-sphinx-1': compile_seano_ce_sphinx_1,
+    'gh_pr_description': compile_gh_pr_description,
     'gha_summary_notes': compile_gha_summary_notes,
     'qa-notes': compile_qa_notes,
     'confluence_latest_releases': compile_confluence_latest_releases,
@@ -35,7 +37,7 @@ format_functions = {
 format_choices = list(format_functions.keys());
 
 
-def format_query_output(src, format, out):
+def format_query_output(src, format, out, restrict_note_ids=None):
 
     if not src:
         raise SeanoFatalError('Invalid seano query output file: (empty string)')
@@ -46,13 +48,17 @@ def format_query_output(src, format, out):
     if format not in format_functions:
         raise SeanoFatalError('Invalid format "%s": not supported' % (format,))
 
+    # Each item in `restrict_note_ids` may be a whitespace-delimited list of
+    # strings.  Split them:
+    restrict_note_ids = sum([x.split() for x in restrict_note_ids], [])
+
     if src in ['-']:
         srcdata = sys.stdin.read()
     else:
         with open(src, 'r') as f:
             srcdata = f.read()
 
-    outdata = format_functions[format](srcdata)
+    outdata = format_functions[format](srcdata, restrict_note_ids=restrict_note_ids)
 
     if sys.hexversion < 0x3000000:
         outdata = outdata.encode('utf-8')
