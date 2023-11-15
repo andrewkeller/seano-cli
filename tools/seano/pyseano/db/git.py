@@ -21,36 +21,29 @@ class GitSeanoDatabase(GenericSeanoDatabase):
             cdup = coerce_to_str(subprocess.check_output(['git', 'rev-parse', '--show-cdup'], cwd=self.path,
                                                          stderr=subprocess.PIPE)).strip()
         except subprocess.CalledProcessError:
-            log.debug('Unable to invoke git as expected')
-            self.repo = None
+            raise SeanoFatalError('Unable to invoke git?')
         except FileNotFoundError:
-            log.info('No database located at %s', self.path)
-            self.repo = None
-        else:
-            self.repo = os.path.abspath(os.path.join(self.path, cdup))
+            raise SeanoFatalError('No database located at %s', self.path)
 
-            # Cache the list of deleted releases so that the ref parser can know to silenty swallow them:
-            self.deleted_releases = [x['name']
-                                     for x in (self.config.get('releases', None) or [])
-                                     if x.get('delete', False)]
+        self.repo = os.path.abspath(os.path.join(self.path, cdup))
 
-    def is_valid(self):
-        # If super doesn't think this is valid, then none of our core required files exist; bail.
-        if not super(GitSeanoDatabase, self).is_valid(): return False
-        # If there is no Git repository at all, then this cannot possibly be GitSeanoDatabase; bail.
-        if not self.repo: return False
+        # Cache the list of deleted releases so that the ref parser can know to silenty swallow them:
+        self.deleted_releases = [x['name']
+                                 for x in (self.config.get('releases', None) or [])
+                                 if x.get('delete', False)]
+
         # If HEAD is not pointed to a real commit, then (almost) none our fancy Git logic will work.
-        if 0 != subprocess.call(['git', 'rev-parse', 'HEAD'],
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.repo): return False
-        # If any files inside the database are committed, then we consider this to be a valid GitSeanoDatabase:
-        if subprocess.check_output(['git', 'log', '-1', '--',
-                                    os.path.relpath(self.path, self.repo)], cwd=self.repo): return True
-        # If any files inside the database are staged, then we consider this to be a valid GitSeanoDatabase:
-        if 0 != subprocess.call(['git', 'diff', '--cached', '--quiet', '--',
-                                 os.path.relpath(self.path, self.repo)], cwd=self.repo): return True
-        # This may very well be a valid Seano database of some kind, but it cannot be a GitSeanoDatabase.
-        log.info('It looks like no files exist where the database is supposed to be (%s)', self.path)
-        return False
+        if 0 != subprocess.call(['git', 'rev-parse', 'HEAD'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.repo):
+            raise SeanoFatalError('The git repository does not yet have a HEAD commit, so there\'s no commit graph to scan')
+
+        # Check for files tracked by Git:
+        if not any([
+            # If any files inside the database are committed, then we consider this to be a valid GitSeanoDatabase:
+            subprocess.check_output(['git', 'log', '-1', '--', os.path.relpath(self.path, self.repo)], cwd=self.repo),
+            # If any files inside the database are staged, then we consider this to be a valid GitSeanoDatabase:
+            0 != subprocess.call(['git', 'diff', '--cached', '--quiet', '--', os.path.relpath(self.path, self.repo)], cwd=self.repo),
+        ]):
+            raise SeanoFatalError('Although %s appears to be a valid seano database, it is not tracked in Git, so we shouldn\'t use GitSeanoDatabase to read it.' % (self.path,))
 
     def incrementalHash(self):
         # Same as dumb implementation, but faster.  Hash all files, but using HEAD as a base

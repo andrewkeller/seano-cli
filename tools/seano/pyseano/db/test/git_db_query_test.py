@@ -66,7 +66,6 @@ class GitDbQueryTest(unittest.TestCase):
 
     def assertQueryOutputEquals(self, workdir, expected):
         db = GitSeanoDatabase(path=workdir)
-        self.assertTrue(db.is_valid())
         self.assertEqual(expected, db.query())
 
     def testNoCommits(self):
@@ -88,10 +87,8 @@ class GitDbQueryTest(unittest.TestCase):
 ''')
             # seano database exists, but Git has no commits
 
-            self.assertFalse(GitSeanoDatabase(path=workdir).is_valid())
-
-            # Becuase is_valid() is false, the behavior of query() is undefined.
-            # Nothing else to test.
+            with self.assertRaises(SeanoFatalError):
+                GitSeanoDatabase(path=workdir)
 
     def testEmptyDatabaseWithUnrelatedCommits(self):
         with self.TempDir() as workdir:
@@ -101,10 +98,37 @@ class GitDbQueryTest(unittest.TestCase):
 ''')
             # seano database exists, but is not committed
 
-            self.assertFalse(GitSeanoDatabase(path=workdir).is_valid())
+            with self.assertRaises(SeanoFatalError):
+                GitSeanoDatabase(path=workdir)
 
-            # Becuase is_valid() is false, the behavior of query() is undefined.
-            # Nothing else to test.
+    def testEmptyDatabaseWithStagedFiles(self):
+        with self.TempDir() as workdir:
+            setup_repo(workdir)
+            shcall(['git', 'commit', '--allow-empty', '-m', 'empty'], cwd=workdir)
+            putfile(os.path.join(workdir, 'seano-config.yaml'), '''---
+''')
+            shcall(['git', 'add', '-A', '.'], cwd=workdir)
+            # seano database exists, but is not committed
+
+            # Unlike the earlier tests, seano should now think that the database
+            # exists, because something is committed inside the seano database
+            # folder in the repo.
+
+            self.assertQueryOutputEquals(workdir, {
+                'current_version': 'HEAD',
+                'releases': [
+                    {
+                        'name': 'HEAD',
+                        'commit': None, # [1]
+                        'before': [],
+                        'after': [],
+                        'notes': [],
+                    },
+                ],
+            })
+
+            # [1] This is a special (weird) case: notes that are *staged* in
+            #     Git have a commit of None.
 
     def testEmptyDatabase(self):
         with self.TempDir() as workdir:
