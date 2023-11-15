@@ -29,7 +29,7 @@ class GenericSeanoDatabase(object):
         # (so that anything in the database configuration overrides the annex):
 
         self.config = dict()
-        def load_file(cfg, is_required):
+        def load_file(cfg, is_failure_suggestive_of_repo_missing):
             try:
                 with open(cfg, 'r', **FILE_ENCODING_KWARGS) as f:
                     for d in yaml.load_all(f, Loader=yaml.FullLoader):
@@ -41,8 +41,11 @@ class GenericSeanoDatabase(object):
                         d = upgrade_root_object_schema(d)
                         self.config.update(d)
             except IOError as e:
-                if is_required or e.errno != errno.ENOENT:
+                if e.errno != errno.ENOENT:
                     raise SeanoFatalError("unusual error while trying to read %s: %s" % (cfg, e))
+                if is_failure_suggestive_of_repo_missing:
+                    raise SeanoFatalError('%s does not exist.  Is this a seano database?' % (cfg,))
+                raise SeanoFatalError('%s does not exist.' % (cfg,))
 
         if config_annex_path:
             load_file(config_annex_path, False)
@@ -52,12 +55,6 @@ class GenericSeanoDatabase(object):
 
         if not self.config.get('current_version', None):
             self.config['current_version'] = 'HEAD'
-
-    def is_valid(self):
-        if not os.path.isfile(os.path.join(self.path, SEANO_CONFIG_FILE)):
-            log.info('%s does not exist.  Is this a seano database?', SEANO_CONFIG_FILE)
-            return False
-        return True
 
     def incrementalHash(self):
         return h_data(h_folder(self.path), str(self.config))

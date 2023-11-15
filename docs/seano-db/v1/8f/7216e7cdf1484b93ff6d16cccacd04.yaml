@@ -1,0 +1,56 @@
+---
+risk: low
+
+employee-short-loc-hlist-md:
+  en-US:
+  - Fix unhelpful warning when querying git-ignored `seano` databases
+
+employee-technical-loc-md:
+  en-US: |
+    When `seano` opens a database for reading, the first thing it does is
+    interrogate the database to see what kind of database reader it should use.
+    Its options are `GitSeanoDatabase`, which leverages Git to implement a number
+    of magical quality-of-life features, and `DumbSeanoDatabase`, which is able
+    to read a `seano` database on disk that is not tracked in any versioning
+    system at all.
+
+    While performing this analysis on a `seano` database that lives inside a
+    git-ignored folder in a Git repository, `seano` would print this to the
+    console before giving up on Git support and trying the `DumbSeanoDatabase`
+    class:
+
+        It looks like no files exist where the database is supposed to be (/path/to/database)
+
+    Fundamentally, this log message should only be displayed when in verbose
+    mode, not when running normally.  Secondarily, it is worded in a way that is
+    confusing.
+
+    Going forward, that message is now only visible when in verbose mode, and
+    the wording has been adjusted so that it's a bit more obvious what it's
+    trying to say:
+
+        Although /path/to/database appears to be a valid seano database, it is not tracked in Git, so we shouldn't use GitSeanoDatabase to read it.
+
+    I considered stopping there, at just a one-line code change.  However, the
+    complexity of `GitSeanoDatabase`'s constructor was bugging me.  Namely, it's
+    more than just the constructor: for proper usage, you need to construct one,
+    and then, you must make sure the `is_valid()` method returns `True`.  Not
+    only is a two-step initialization weird, but also it's difficult for a
+    function that returns a boolean to also return a human-readable error
+    message.  *(the easy way to not log at incorrect levels is to return your
+    error message, rather than log it)*
+
+    Going forward, the initialization logic of the infrastructure used to read
+    `seano` database from disk has been simplified.  Instead of a constructor
+    that can throw, paired with an `is_valid()` method, we now only have a
+    constructor that can throw.  Most importantly, this allows the logic that
+    used to be inside the `is_valid()` method to be able to report a
+    human-readable error message to the caller.
+
+    This refactor has no impact to any usages of `seano`.
+
+    This change has no impact to any production code.
+
+qa-technical-loc-md:
+  en-US: |
+    This change has 100% test coverage, so there is nothing to test manually.

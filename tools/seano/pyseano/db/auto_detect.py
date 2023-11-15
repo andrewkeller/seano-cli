@@ -54,15 +54,13 @@ def find_seano_database(db_search_seed_path):
 
 
 def open_seano_database(path, **db_kwargs):
-    db = GitSeanoDatabase(path, **db_kwargs)
-    if db.is_valid():
-        log.debug('Using GitSeanoDatabase at %s', path)
-        return db
-    db = DumbSeanoDatabase(path, **db_kwargs)
-    if db.is_valid():
-        log.debug('Using DumbSeanoDatabase at %s', path)
-        return db
-    raise SeanoFatalError('None of the seano database implementations accepted the path `%s`...  What is wrong?' % (path,))
+    try:
+        return GitSeanoDatabase(path, **db_kwargs)
+    except SeanoFatalError as e:
+        log.debug('GitSeanoDatabase refused to load %s: %s' % (path, e))
+
+    # Let thrown exceptions unwind to the caller:
+    return DumbSeanoDatabase(path, **db_kwargs)
 
 
 def find_and_open_seano_database(db_search_seed_path, **db_kwargs):

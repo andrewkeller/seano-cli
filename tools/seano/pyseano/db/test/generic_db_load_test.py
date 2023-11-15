@@ -21,7 +21,7 @@ class GenericDbLoadTest(unittest.TestCase):
         def __exit__(self, exc_type, exc_val, exc_tb):
             rmrf(self.workdir)
 
-    def run_test(self, seano_config_annex_data=None, seano_config_data=None, check_test=None):
+    def run_test(self, seano_config_annex_data='', seano_config_data='', check_test=None):
         with self.TempDir() as workdir:
             config_path = os.path.join(workdir, 'seano-config.yaml')
             config_annex_path = os.path.join(workdir, 'seano-config-annex.yaml')
@@ -47,13 +47,13 @@ class GenericDbLoadTest(unittest.TestCase):
                 check_test(db=db)
 
     def testMissingConfigFile(self):
-        self.run_test(check_test=SeanoFatalError)
+        self.run_test(seano_config_data=None, seano_config_annex_data='', check_test=SeanoFatalError)
 
-    def testEmptyConfigFile(self):
-        self.run_test(seano_config_data='')
+    def testMissingConfigAnnexFile(self):
+        self.run_test(seano_config_data='', seano_config_annex_data=None, check_test=SeanoFatalError)
 
-    def testEmptyConfigAnnexFile(self):
-        self.run_test(seano_config_annex_data='', seano_config_data='')
+    def testEmptyConfigAndAnnexFiles(self):
+        self.run_test()
 
     def testConfigIsLoaded(self):
         self.run_test(seano_config_annex_data='{"example_string2":"foo"}',
