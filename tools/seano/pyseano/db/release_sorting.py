@@ -7,12 +7,39 @@ To improve readability and testability, the algorithm is isolated to here.
 
 import itertools
 import logging
+import re
 import sys
 
 log = logging.getLogger(__name__)
 
 if sys.hexversion < 0x3000000:
     range = xrange
+
+
+alpha_or_numeric_regex = re.compile(r'(\d+|[a-zA-Z]+)')
+numeric_regex = re.compile(r'(\d+)')
+
+def semverish_sort_key(version_string):
+    """
+    Returns an opaque, comparable value representing the given string.  The
+    nuances of the comparable value are engineered to be desirable, assuming
+    that the string is some kind of version string.  This algorithm is
+    compatible with most common versioning patterns, including SemVer.
+    """
+    prerelease, _, build = version_string.partition('+')
+    try: release = re.search(r'^[0-9\.]+', prerelease).group(0)
+    except: release = ''
+    prerelease = prerelease[len(release):]
+
+    release    = filter(alpha_or_numeric_regex.match, alpha_or_numeric_regex.split(release))
+    prerelease = filter(alpha_or_numeric_regex.match, alpha_or_numeric_regex.split(prerelease))
+    build      = filter(alpha_or_numeric_regex.match, alpha_or_numeric_regex.split(build))
+
+    release    = [int(x) if numeric_regex.match(x) else x[0] for x in release]
+    prerelease = [int(x) if numeric_regex.match(x) else x[0] for x in prerelease]
+    build      = [int(x) if numeric_regex.match(x) else x[0] for x in build]
+
+    return [release, prerelease, build]
 
 
 def sorted_release_names_from_releases(release_dicts):

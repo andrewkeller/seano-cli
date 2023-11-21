@@ -46,7 +46,7 @@ def rmrf(workdir):
     shutil.rmtree(workdir, onerror=on_error)
 
 def setup_repo(workdir):
-    shcall(args=['git', 'init'], cwd=workdir)
+    shcall(args=['git', '-c', 'init.defaultBranch=master', 'init'], cwd=workdir)
     # Some builders don't have a git author configured, and they also have a bogus system identity,
     # which can cause `git commit` to become grumpy.
     shcall(args=['git', 'config', 'user.email', 'you@example.com'], cwd=workdir)
@@ -685,8 +685,24 @@ parent_versions:
         '''
         with self.TempDir() as workdir:
             setup_repo(workdir)
-            putfile(os.path.join(workdir, 'seano-config.yaml'), '''---
+            putfile(os.path.join(workdir, 'seano-config.yaml'), r'''---
 current_version: "2.0"
+
+# ABK: Deliberately overriding the list of ref parsers, because we don't want
+#      to enable backstories for prereleases like `seano` normally does, to help
+#      keep complexity down in this test.  Instead, simply set a value on the
+#      release to tell which ref parser triggered.
+ref_parsers:
+- description: Release Tag
+  regex: '^refs/tags/v(?P<name>[0-9\.]+)$'
+  release:
+    name: "{name}"
+    release-type: gm
+- description: Beta Tag
+  regex: '^refs/tags/v(?P<name>[0-9b\.]+)$'
+  release:
+    name: "{name}"
+    release-type: beta
 ''')
             shcall(['git', 'add', '-A', '.'], cwd=workdir)
             shcall(['git', 'commit', '-m', 'wip'], cwd=workdir)
@@ -720,9 +736,28 @@ current_version: "2.0"
 
             self.assertQueryOutputEquals(workdir, {
                 'current_version': '2.0',
+                'ref_parsers': [
+                    {
+                        'description': 'Release Tag',
+                        'regex': r'^refs/tags/v(?P<name>[0-9\.]+)$',
+                        'release': {
+                            'name': '{name}',
+                            'release-type': 'gm',
+                        },
+                    },
+                    {
+                        'description': 'Beta Tag',
+                        'regex': r'^refs/tags/v(?P<name>[0-9b\.]+)$',
+                        'release': {
+                            'name': '{name}',
+                            'release-type': 'beta',
+                        },
+                    },
+                ],
                 'releases': [
                     {
                         'name': '2.0',
+                        'release-type': 'gm',
                         'commit': commit_ids['2.0'],
                         'before': [],
                         'after': [{'name': '1.3'}],
@@ -730,6 +765,7 @@ current_version: "2.0"
                     },
                     {
                         'name': '1.3',
+                        'release-type': 'gm',
                         'commit': commit_ids['1.3'],
                         'before': [{'name': '2.0'}],
                         'after': [{'name': '1.2'}, {'name': '1.2b5'}],
@@ -737,6 +773,7 @@ current_version: "2.0"
                     },
                     {
                         'name': '1.2b5',
+                        'release-type': 'beta',
                         'commit': commit_ids['1.2b5'],
                         'before': [{'name': '1.3'}],
                         'after': [{'name': '1.2b1'}],
@@ -744,6 +781,7 @@ current_version: "2.0"
                     },
                     {
                         'name': '1.2',
+                        'release-type': 'gm',
                         'commit': commit_ids['1.2'],
                         'before': [{'name': '1.3'}],
                         'after': [{'name': '1.2b1'}],
@@ -751,6 +789,7 @@ current_version: "2.0"
                     },
                     {
                         'name': '1.2b1',
+                        'release-type': 'beta',
                         'commit': commit_ids['1.2b1'],
                         'before': [{'name': '1.2'}, {'name': '1.2b5'}],
                         'after': [{'name': '1.1'}],
@@ -758,6 +797,7 @@ current_version: "2.0"
                     },
                     {
                         'name': '1.1',
+                        'release-type': 'gm',
                         'commit': commit_ids['1.1'],
                         'before': [{'name': '1.2b1'}],
                         'after': [{'name': '1.1b2'}],
@@ -765,6 +805,7 @@ current_version: "2.0"
                     },
                     {
                         'name': '1.1b2',
+                        'release-type': 'beta',
                         'commit': commit_ids['1.1b2'],
                         'before': [{'name': '1.1'}],
                         'after': [{'name': '1.0'}],
@@ -772,6 +813,7 @@ current_version: "2.0"
                     },
                     {
                         'name': '1.0',
+                        'release-type': 'gm',
                         'commit': commit_ids['1.0'],
                         'before': [{'name': '1.1b2'}],
                         'after': [],
