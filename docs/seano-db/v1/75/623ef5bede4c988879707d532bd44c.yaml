@@ -1,0 +1,109 @@
+---
+risk: low
+
+employee-short-loc-hlist-md:
+  en-US:
+  - Automatically enable backstories for known pre-releases when building docs
+
+employee-upgrade-loc-md:
+  en-US: |
+    For existing projects, it is recommended to add this configuration to your
+    project's `seano-config.yaml` file, to eliminate as many behavior differences
+    as possible:
+
+    ```yaml
+    ref_parsers:
+    - description: Legacy seano ref parser
+      regex: '^refs/tags/v(?P<name>[0-9]+(\.[0-9]+)+([a-z]{1,2}[0-9]+)?)$'
+      release:
+        name: '{name}'
+    ```
+
+    Once you have successfully upgraded to this new version of `seano`, go ahead
+    and try removing the above configuration, and see what breaks.
+
+    In particular, if your project uses release tags with fewer or more than 3
+    components (such as `v1.2` or `v1.2.3.4`, or if your project uses SemVer
+    pre-release tags, then you may need some kind of customized ref parser list
+    in `seano-config.yaml`.  Refer to the technical docs for this change for more
+    information.
+
+employee-technical-loc-md:
+  en-US: |
+    When autonomously intuiting releases from tags, `seano` now uses a list of
+    regexes to analyze ref names, rather than just a single regex.  This allows
+    us to specify custom side effects when a particular regex matches.  If you
+    use standard tagging conventions, the default set of ref parsers can tell
+    the difference between a general release and a pre-release — and, for all
+    pre-releases, `auto-wrap-in-backstory` is automatically set to `True`.
+
+    When a ref parser contributes properties to a release, the properties are
+    treated as *automatically harvested properties*.  This means that the values
+    of the properties can be manually overridden via a defined release in
+    `seano-config.yaml`.
+
+    The list of ref parsers can be overridden on a per-project basis in
+    `seano-config.yaml`, using the key `ref_parsers`.  There is currently no way
+    to access or mutate the default set of ref parsers from within
+    `seano-config.yaml`; if you want to customize it, you must define a whole new
+    list of ref parsers.
+
+    The default set of ref parsers is functionally identical to the previous
+    implementation, except:
+
+    1.  **Release tags are no longer allowed to have two or more components;**
+        Instead, release tags must have exactly 3 components.  *(this behavior
+        stolen from SemVer)*
+
+    1.  **Numeric components in tags are no longer allowed to start with the
+        character `0` (zero).**  *(this behavior stolen from SemVer)*
+
+    1.  **A limited subset of SemVer pre-release tags are now accepted**, in
+        addition to the traditional pre-release syntax accepted by the prior
+        regex.  For example, `v1.2.3-alpha.1` is now accepted, in addition to
+        `v1.2.3a1`, respectively.
+
+    To see the default set of ref parsers, search `seano`'s source for the
+    constant `DEFAULT_REF_PARSERS`.
+
+    When customizing the list of ref parsers in your project, here is an example
+    of what it looks like:
+
+    ```yaml
+    ref_parsers:                                                            # [1]
+    - description: Legacy seano ref parser                                   # [2]
+      regex: '^refs/tags/v(?P<name>[0-9]+(\.[0-9]+)+([a-z]{1,2}[0-9]+)?)$'  # [3]
+      release:                                                              # [4]
+        example: 'custom string field for the {name} release'               # [5]
+        name: '{name}'                                                      # [6]
+    ```
+
+    1.  The top-level key in `seano-config.yaml` that `seano` looks at when
+        looking for customized ref parsers.  When this key exists, it completely
+        replaces all of the default ref parsers.
+    1.  A human-readable description of this ref parser, used in error logging
+        when the regex fails to compile.
+    1.  The regex to use.  This particular regex happens to be the same regex
+        used in the prior version of `seano`.  Note the use of named capture
+        groups; we'll use those in a moment.
+    1.  When the regex matches, yield this release object template.  All keys
+        inside this dictionary can be overridden in `seano-config.yaml` via a
+        defined release in the `releases` list.  Behavior when this key is
+        missing or not a dictionary is currently undefined.
+    1.  The release object template can contain whatever keys you want.  All
+        values are supported, so long as Python's Yaml parser can parse it, and
+        Python's Json serializer can serialize it.  String values in particular
+        are a little special: they have access to the named capture groups in
+        the regex, allowing for a limited form of text substitution.
+    1.  Under the hood, `seano` indexes releases by name, which means that any
+        time you talk about a release, the name cannot be missing.  Fortunately,
+        the regex captured the release name, so we can use the captured text as
+        the release name.
+
+    This change is classified as low risk because it is not used in production
+    logic.
+
+qa-technical-loc-md:
+  en-US: |
+    Docs are not used in production, so there is nothing customer-facing to test
+    here.

@@ -7,11 +7,39 @@ Reads a git-backed seano database.
 from pyseano.db.common import SeanoDataAggregator
 from pyseano.utils import *
 from pyseano.db.generic import GenericSeanoDatabase
+from pyseano.db.release_sorting import semverish_sort_key
 import os
 import re
 import subprocess
 
 log = logging.getLogger(__name__)
+
+
+DEFAULT_REF_PARSERS = [
+    {
+        'description': 'SemVer Release Tag',
+        'regex': r'^refs/tags/v(?P<name>0|[1-9]\d*(\.(0|[1-9]\d*)){2})$',
+        'release': {
+            'name': '{name}',
+        },
+    },
+    {
+        'description': 'Limited Named SemVer Pre-Release Tag',
+        'regex': r'^refs/tags/v(?P<name>0|[1-9]\d*(\.(0|[1-9]\d*)){2}-(?P<stage>[a-z]+).(?P<build>[1-9]\d*))$',
+        'release': {
+            'name': '{name}',
+            'auto-wrap-in-backstory': True,
+        },
+    },
+    {
+        'description': 'Traditional Pre-Release Tag',
+        'regex': r'^refs/tags/v(?P<name>0|[1-9]\d*(\.(0|[1-9]\d*)){2}[a-z]{1,2}[1-9]\d*)$',
+        'release': {
+            'name': '{name}',
+            'auto-wrap-in-backstory': True,
+        },
+    },
+]
 
 
 class GitSeanoDatabase(GenericSeanoDatabase):
@@ -26,11 +54,6 @@ class GitSeanoDatabase(GenericSeanoDatabase):
             raise SeanoFatalError('No database located at %s', self.path)
 
         self.repo = os.path.abspath(os.path.join(self.path, cdup))
-
-        # Cache the list of deleted releases so that the ref parser can know to silenty swallow them:
-        self.deleted_releases = [x['name']
-                                 for x in (self.config.get('releases', None) or [])
-                                 if x.get('delete', False)]
 
         # If HEAD is not pointed to a real commit, then (almost) none our fancy Git logic will work.
         if 0 != subprocess.call(['git', 'rev-parse', 'HEAD'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.repo):
@@ -162,6 +185,70 @@ class GitSeanoDatabase(GenericSeanoDatabase):
         result['releases'] = s.dump()
         return result
 
+    _cached_ref_parsers = None
+    def get_ref_parsers(self):
+        '''
+        Returns all of the ref parsers.
+        '''
+        if self._cached_ref_parsers is None:
+            class ReleaseCreator(object):
+                def __init__(self, description, regex, release):
+                    self.description = description
+                    self.regex_pattern = regex
+                    self.release = release
+
+                _regex = None
+                def regex(self):
+                    if self._regex is None:
+                        try:
+                            self._regex = re.compile(self.regex_pattern)
+                        except re.error as e:
+                            raise SeanoFatalError('Unable to compile %s regex: %s' % (self.description, e))
+                    return self._regex
+
+                def match(self, ref):
+                    m = self.regex().search(ref)
+                    if not m: return None
+                    subs = m.groupdict()
+                    return {
+                        k: v.format(**subs) if isinstance(v, str) else v for k, v in self.release.items()
+                    }
+
+            def make_parsers():
+                for idx, cfg in enumerate(self.config.get('ref_parsers') or DEFAULT_REF_PARSERS):
+                    try:
+                        description = cfg['description']
+                    except KeyError:
+                        raise SeanoFatalError('Unable to parse `ref_parsers`: for rule at index %d: missing field: `description`' % (idx,))
+
+                    try:
+                        regex = cfg['regex']
+                    except KeyError:
+                        raise SeanoFatalError('Unable to parse `ref_parsers`: for rule at index %d: missing field: `regex`' % (idx,))
+
+                    release = cfg.get('release')
+
+                    if release is not None:
+                        if not isinstance(release, dict) or 'name' not in release:
+                            raise SeanoFatalError('Unable to parse `ref_parsers`: for rule at index %d: missing field: `name`' % (idx,))
+
+                    yield ReleaseCreator(description=description, regex=regex, release=release)
+
+            self._cached_ref_parsers = list(make_parsers())
+        return self._cached_ref_parsers
+
+
+    _cached_deleted_release_names = None
+    def get_deleted_release_names(self):
+        '''
+        Returns a list of all of the releases that were manually deleted.
+        '''
+        if self._cached_deleted_release_names is None:
+            self._cached_deleted_release_names = [
+                x['name'] for x in (self.config.get('releases') or []) if x.get('delete')
+            ]
+        return self._cached_deleted_release_names
+
 
     def parse_ref(self, ref):
         '''
@@ -169,11 +256,11 @@ class GitSeanoDatabase(GenericSeanoDatabase):
 
         If we think this ref indicates a release, we return the release name.  Else, we return None.
         '''
-        m = re.match(r'^refs/tags/v(?P<name>[0-9]+(\.[0-9]+)+([a-z]{1,2}[0-9]+)?)$', ref)
-        if m:
-            name = m.group('name')
-            if name not in self.deleted_releases:
-                return name
+        for parser in self.get_ref_parsers():
+            m = parser.match(ref)
+            if m:
+                if m['name'] not in self.get_deleted_release_names():
+                    return m
         return None
 
 
@@ -210,7 +297,7 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                         'after' : [{'name': <name>, ...}],  # (optional) associative array of releases after
                         'before' : [{'name': <name>, ...}], # (optional) associative array of releases before
                         'commit' : <commit-id>,             # commit of this release
-                        ...                                 # (optional) more juicy info?
+                        ...                                 # (optional) more juicy info?  (e.g., ref parsers can provide user-defined info)
                     }
                 }
             }
@@ -370,7 +457,8 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                 parents = [x for x in parents if x]
                 refs = [x for x in refs if x]
 
-                releases = list(filter(None, map(self.parse_ref, refs)))
+                releases = sorted(list(filter(None, map(self.parse_ref, refs))),
+                                  key=lambda d: semverish_sort_key(d.get('comparable-name') or d['name']))
 
                 yield Commit(
                     commit_id = commit_id,
@@ -415,6 +503,10 @@ class GitSeanoDatabase(GenericSeanoDatabase):
         log.debug('pattern used to detect new notes is %s', primary_note_pattern)
         primary_note_regex = re.compile(primary_note_pattern, re.IGNORECASE)
 
+        local_current_releases = []  # List of release *names*
+        current_releases = {}  # Dictionary of sets of release *names*, organized per-commit
+        distant_releases = {}  # Dictionary of sets of release *names*, organized per-commit
+
         for commit in yield_commits():
             log.debug('Investigating commit %s', commit.commit_id)
 
@@ -435,22 +527,21 @@ class GitSeanoDatabase(GenericSeanoDatabase):
 
                 # Next, seed our tracking structures:
 
-                local_current_releases = [self.config['current_version']]
-
-                current_releases = {    # set() per-commit
-                    commit.commit_id : set(local_current_releases),
-                }
-                distant_releases = {    # set() per-commit
-                    commit.commit_id : set(),
-                }
-
-                # If self.config['current_version'] is identical to a tag we're building on, then remove that
-                # tag from the releases list that we will soon parse.  Declaring a release more than once is
-                # a fatal error, which is a good thing -- but when building on a tag, it's common for the tag
-                # on the HEAD commit to be identical to self.config['current_version']; when that happens,
-                # don't explode.
-
-                commit.releases = list(filter(lambda v: v != self.config['current_version'], commit.releases))
+                if self.config['current_version'] in [x['name'] for x in commit.releases]:
+                    # If the git scanner (i.e., the `yield_commits()` method)
+                    # found a release that is identical to the current product
+                    # version, then that means we're building on a tag.  Because
+                    # declaring a release more than once is a fatal error (to
+                    # help catch bugs in the git scanner), we must go out of our
+                    # way to *not* artificially declare the current product
+                    # version as a release.
+                    log.debug('Looks like we\'re building on a release')
+                    current_releases[commit.commit_id] = set()
+                    distant_releases[commit.commit_id] = set()
+                else:
+                    local_current_releases.append(self.config['current_version'])
+                    current_releases[commit.commit_id] = set(local_current_releases)
+                    distant_releases[commit.commit_id] = set()
 
             if commit.releases:
                 # We found a new release tag!  This means:
@@ -460,11 +551,11 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                 #     should get moved to distant_releases[commit.commit_id]
 
                 # We found release tag(s).  Parse them.
-                local_current_releases = set(commit.releases)
+                local_current_releases = set([x['name'] for x in commit.releases])
                 immediate_descendants  = current_releases[commit.commit_id] - distant_releases[commit.commit_id]
                 local_distant_releases = current_releases[commit.commit_id] | distant_releases[commit.commit_id]
 
-                log.debug('Investigating release %s'
+                log.debug('Investigating discovered releases %s'
                           '\n\tcurrent_releases[commit.commit_id]: %s'
                           '\n\tdistant_releases[commit.commit_id]: %s'
                           '\n\tlocal_current_releases: %s'
@@ -484,6 +575,11 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                 # Notify the caller of the commit ID of this release:
                 yield {'releases' : {
                     x : { 'commit' : commit.commit_id } for x in local_current_releases
+                }}
+
+                # Notify the caller of attributes specified by the ref parser:
+                yield {'releases': {
+                    x['name']: {k: v for k, v in x.items() if k not in ['name']} for x in commit.releases
                 }}
 
                 # Notify the caller of the discovered release ancestry:
