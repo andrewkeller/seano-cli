@@ -1,0 +1,21 @@
+---
+risk: low
+
+employee-short-loc-hlist-md:
+  en-US:
+  - Include extern IDs on imported notes when performing a `seano` query
+
+employee-technical-loc-md:
+  en-US: |
+    To aid in making improvements to `seano` views, when you run a query, all
+    imported notes now contain a property indicating the extern ID of the
+    database from which the note originated.  The new property is named
+    `x-seano-extern-identifier`.  It does not exist on non-imported notes.
+
+    This change is classified as low risk because it does not impact any
+    production-facing functionality.
+
+qa-technical-loc-md:
+  en-US: |
+    Docs are not used in production, so there is nothing customer-facing to test
+    here.

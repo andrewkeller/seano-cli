@@ -9,6 +9,8 @@ from pyseano.db.release_sorting import sorted_release_names_from_releases
 from pyseano.db.schema_upgrade import upgrade_note_schema, upgrade_release_schema
 from pyseano.utils import FILE_ENCODING_KWARGS, SeanoFatalError, list_if_not_already, ascii_str_type, unicode_str_type
 import logging
+import os
+import re
 import sys
 import yaml
 
@@ -266,12 +268,16 @@ class SeanoDataAggregator(object):
     # internal plumbing:
 
 
+    _extern_id_path_regex = re.compile(r'\.extern\-(?P<name>.+)\.yaml$')
     def get_note(self, filename, uid):
         if uid not in self.notes:
             log.debug('Loading note %s from disk (from %s)', uid, filename)
             # Start with a template note containing the given information:
             data = {}
             self.generic_setattr(data, 'notes[' + uid + ']', 'id', True, uid)
+            m = self._extern_id_path_regex.search(os.path.basename(filename))
+            if m:
+                self.generic_setattr(data, 'notes[' + uid + ']', 'x-seano-extern-identifier', True, m.group('name'))
 
             self.notes[uid] = data
 
