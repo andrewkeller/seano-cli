@@ -1,11 +1,11 @@
 """
-pyseano/cmd/list_notes.py
+seano_cli/cmd/list_notes.py
 
 Interactive command-line wrapper on top of the infrastructure that lists the latest added release notes.
 """
 
-from pyseano.db import *
-from pyseano.utils import *
+from seano_cli.db import *
+from seano_cli.utils import *
 
 log = logging.getLogger(__name__)
 

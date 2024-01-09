@@ -1,12 +1,12 @@
 """
-pyseano/cmd/mark_as_ghost.py
+seano_cli/cmd/mark_as_ghost.py
 
 Interactive command-line wrapper on top of the infrastructure that marks
 currently existing extern notes as ghosts.
 """
 
-from pyseano.db import *
-from pyseano.utils import *
+from seano_cli.db import *
+from seano_cli.utils import *
 
 log = logging.getLogger(__name__)
 

@@ -1,11 +1,11 @@
 """
-pyseano/cmd/edit_note.py
+seano_cli/cmd/edit_note.py
 
 Interactive command-line wrapper on top of the infrastructure that edits the latest added release note.
 """
 
-from pyseano.db import *
-from pyseano.utils import *
+from seano_cli.db import *
+from seano_cli.utils import *
 
 log = logging.getLogger(__name__)
 

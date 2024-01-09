@@ -1,13 +1,13 @@
 """
-pyseano/cmd/import_from_submodules.py
+seano_cli/cmd/import_from_submodules.py
 
 Interactive command-line wrapper on top of the infrastructure that syncs
 database changes in submodules with the the current database.
 """
 
-from pyseano.db import *
-from pyseano.db.auto_detect import find_seano_database
-from pyseano.utils import SeanoFatalError
+from seano_cli.db import *
+from seano_cli.db.auto_detect import find_seano_database
+from seano_cli.utils import SeanoFatalError
 import os
 import sys
 

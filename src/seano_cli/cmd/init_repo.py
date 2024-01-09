@@ -1,11 +1,11 @@
 """
-pyseano/cmd/init_repo.py
+seano_cli/cmd/init_repo.py
 
 Interactive command-line implementation of initializing a new seano database.
 """
 
-from pyseano.constants import *
-from pyseano.utils import SeanoFatalError, FILE_ENCODING_KWARGS
+from seano_cli.constants import *
+from seano_cli.utils import SeanoFatalError, FILE_ENCODING_KWARGS
 import errno
 import logging
 import os

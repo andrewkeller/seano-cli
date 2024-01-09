@@ -1,13 +1,13 @@
 """
-pyseano/db/git/git.py
+seano_cli/db/git/git.py
 
 Reads a git-backed seano database.
 """
 
-from pyseano.db.common import SeanoDataAggregator
-from pyseano.utils import *
-from pyseano.db.generic import GenericSeanoDatabase
-from pyseano.db.release_sorting import semverish_sort_key
+from seano_cli.db.common import SeanoDataAggregator
+from seano_cli.utils import *
+from seano_cli.db.generic import GenericSeanoDatabase
+from seano_cli.db.release_sorting import semverish_sort_key
 import os
 import re
 import subprocess

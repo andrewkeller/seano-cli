@@ -1,11 +1,11 @@
 """
-pyseano/cmd/query_repo.py
+seano_cli/cmd/query_repo.py
 
 Interactive command-line wrapper on top of the infrastructure that queries a seano database for release notes.
 """
 
-from pyseano.db import *
-from pyseano.utils import *
+from seano_cli.db import *
+from seano_cli.utils import *
 import json
 
 log = logging.getLogger(__name__)

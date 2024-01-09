@@ -1,11 +1,11 @@
 """
-pyseano/cmd/init_note.py
+seano_cli/cmd/init_note.py
 
 Interactive command-line wrapper on top of the infrastructure that creates a new release note.
 """
 
-from pyseano.db import *
-from pyseano.utils import *
+from seano_cli.db import *
+from seano_cli.utils import *
 import sys
 
 

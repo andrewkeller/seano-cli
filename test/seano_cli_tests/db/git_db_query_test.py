@@ -2,8 +2,8 @@
 #
 # Automated unit tests for the GitSeanoDatabase class
 #   - in particular, the behavior related to querying a database
-from ..git import GitSeanoDatabase
-from ...utils import SeanoFatalError, coerce_to_str, write_existing_file
+from seano_cli.db.git import GitSeanoDatabase
+from seano_cli.utils import SeanoFatalError, coerce_to_str, write_existing_file
 import errno
 import os
 import shutil

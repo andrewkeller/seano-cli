@@ -1,5 +1,5 @@
 """
-pyseano/constants.py
+seano_cli/constants.py
 
 Shared constants used by seano
 """
