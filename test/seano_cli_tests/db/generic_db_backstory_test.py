@@ -2,7 +2,7 @@
 #
 # Automated unit tests for the GenericSeanoDatabase class
 #   - in particular, the behavior related to processing backstories
-from ..generic import GenericSeanoDatabase
+from seano_cli.db.generic import GenericSeanoDatabase
 import os
 import shutil
 import tempfile

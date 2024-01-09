@@ -1,11 +1,11 @@
 """
-pyseano/db/schema_upgrade.py
+seano_cli/db/schema_upgrade.py
 
 As it turns out, updating schemas is complicated enough that it mucks up other files.
 So to make other code readable, we've taken all of the horror and collected it here.
 """
 
-from pyseano.utils import SeanoFatalError, ascii_str_type, unicode_str_type
+from seano_cli.utils import SeanoFatalError, ascii_str_type, unicode_str_type
 import logging
 
 log = logging.getLogger(__name__)

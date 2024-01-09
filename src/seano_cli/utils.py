@@ -1,10 +1,10 @@
 """
-pyseano/utils.py
+seano_cli/utils.py
 
 Generic seano util functions
 """
 
-from pyseano.constants import *
+from seano_cli.constants import *
 import errno
 import hashlib
 import logging

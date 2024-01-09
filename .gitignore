@@ -1,0 +1,5 @@
+/.?vi?r?t?u?a?l?env/
+/dist/
+*.egg-info/
+*.py[oc]
+*.swp

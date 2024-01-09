@@ -1,12 +1,12 @@
 """
-pyseano/db/generic.py
+seano_cli/db/generic.py
 
 Base class for the different kinds of seano databases
 """
 
-from pyseano.db.common import SeanoDataAggregator
-from pyseano.db.schema_upgrade import upgrade_root_object_schema
-from pyseano.utils import *
+from seano_cli.db.common import SeanoDataAggregator
+from seano_cli.db.schema_upgrade import upgrade_root_object_schema
+from seano_cli.utils import *
 import errno
 import glob
 import logging

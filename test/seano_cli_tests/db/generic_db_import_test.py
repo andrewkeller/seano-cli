@@ -2,8 +2,8 @@
 #
 # Automated unit tests for the GenericSeanoDatabase class
 #   - in particular, the behavior related to importing notes from an extern database
-from ..generic import GenericSeanoDatabase
-from ...utils import write_existing_file
+from seano_cli.db.generic import GenericSeanoDatabase
+from seano_cli.utils import write_existing_file
 import os
 import shutil
 import subprocess
@@ -54,8 +54,7 @@ def invokeSeano(args, cwd):
     Considered just swallowing stdout, but we would like to see it to make sure
     it looks right.
     '''
-    p = subprocess.Popen([sys.executable, os.path.abspath('seano')] + args,
-                         cwd=cwd,
+    p = subprocess.Popen([sys.executable, '-m', 'seano_cli.cli'] + args, cwd=cwd,
                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output, _ = p.communicate()
 

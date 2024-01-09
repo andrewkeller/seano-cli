@@ -1,7 +1,7 @@
 # schema_upgrade_test.py
 #
 # Automated unit tests for the schema upgrading logic in seano
-from ..schema_upgrade import upgrade_note_schema
+from seano_cli.db.schema_upgrade import upgrade_note_schema
 import unittest
 
 

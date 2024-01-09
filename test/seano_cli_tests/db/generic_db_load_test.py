@@ -2,8 +2,8 @@
 #
 # Automated unit tests for the GenericSeanoDatabase class
 #   - in particular, the behavior related to loading a database
-from ..generic import GenericSeanoDatabase
-from ...utils import SeanoFatalError
+from seano_cli.db.generic import GenericSeanoDatabase
+from seano_cli.utils import SeanoFatalError
 import os
 import shutil
 import tempfile

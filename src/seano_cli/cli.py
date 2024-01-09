@@ -7,8 +7,8 @@ CE (release) Notes
 Interrogates and manipulates a CE Release Notes (seano) database.
 """
 
-from pyseano.cmd import *
-from pyseano.utils import SeanoFatalError
+from seano_cli.cmd import *
+from seano_cli.utils import SeanoFatalError
 import argparse
 import logging
 import os
@@ -172,23 +172,23 @@ def main():
 
     subparser = subparsers.add_parser('format', help='Convert a seano query output file into something human-readable')
     subparser.set_defaults(func=format_query_output)
-    subparser.add_argument('--src', action='store', required=True, help='Input file; use a single hyphen for stdin')
-    subparser.add_argument('--out', action='store', required=True, help='Output file; use a single hyphen for stdout')
-    subparser.add_argument('--format', action='store', required=True, help='Format to render', choices=format_choices)
-    subparser.add_argument('--restrict-note-ids', action='append', default=[],
-                           help='Only print a given note if it has this note ID.  This parameter is an accumulator, '
-                           'meaning that you can specify it multiple times, to specify multiple note IDs.  Separately, '
-                           'you may also specify multiple note IDs using a whitespace delimiter to a single usage of '
-                           'this parameter.')
+    subparser.add_argument('--list-formatters', action='store_true', help='List all of the Seano formatter plugins '
+                           'currently installed on this computer')
+    subparser.add_argument('format_name', metavar='FORMAT', nargs='?', help='The name of the format to use; this is '
+                           'either the short name of a Seano formatter plugin, or it is the fully qualified Python '
+                           'module name of a private Seano formatter')
+    subparser.add_argument('args', nargs=argparse.REMAINDER, help='The argument stack to supply to the formatter')
+    subparser.set_defaults(usage_str=subparser.format_usage())
 
     ns = parser.parse_args()
 
     logging.basicConfig(level=
         {
-            0 : logging.INFO,
-            1 : logging.DEBUG,
+            0 : logging.WARNING,
+            1 : logging.INFO,
+            2 : logging.DEBUG,
         }.get(
-            min(max(ns.verbose, 0), 1)
+            min(max(ns.verbose, 0), 2)
         ))
 
     log.debug('Arguments: %s', ns)
@@ -208,7 +208,7 @@ def main():
         # this exception contains an error message to be printed, plus also indicates that
         # we should exit with a non-zero exit status.
 
-        if ns.verbose:
+        if ns.verbose > 1:
             # Show the stack trace of this error, followed by the error message, and then die:
             raise
 

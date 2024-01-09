@@ -1,0 +1,71 @@
+name: Build & Test
+
+on: push
+
+jobs:
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+
+    - name: Package
+      run: |
+        python3 -m venv .virtualenv
+        . .virtualenv/bin/activate
+        pip install -r ci_build_requirements.txt
+        python setup.py check
+        python -m build
+
+    - name: Publish Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist
+        if-no-files-found: error
+
+  test:
+    strategy:
+      matrix:
+        python-version:
+        - '3.12'
+        - '3.11'
+        - '3.10'
+        - '3.9'
+        - '3.8'
+        - '3.7'
+        platform:
+        - name: Ubuntu
+          runs-on: ubuntu-latest
+        - name: Windows
+          runs-on: windows-latest
+
+    name: Test Py ${{ matrix.python-version }} on ${{ matrix.platform.name }}
+    runs-on: ${{ matrix.platform.runs-on }}
+    needs: package
+    timeout-minutes: 3
+
+    steps:
+    - name: Install Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+
+    - name: Download Packaged Distribution
+      uses: actions/download-artifact@v4
+      with:
+        name: dist
+
+    - name: Test
+      run: |
+        ${{ (runner.os == 'Windows')
+            && '$seano_wheel = Get-ChildItem .\seano_cli-*-py3-*.whl | Select-Object -Expand FullName'
+            || 'seano_wheel=seano_cli-*-py3-*.whl' }}
+        pip install $seano_wheel -r ci_utest_requirements.txt
+        python -m pytest test

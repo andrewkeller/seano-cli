@@ -1,13 +1,13 @@
 """
-pyseano/db/auto_detect.py
+seano_cli/db/auto_detect.py
 
 Automatically deduces the type of the database at the given path, and returns an appropriate database reader.
 """
 
-from pyseano.constants import *
-from pyseano.db.dumb import DumbSeanoDatabase
-from pyseano.db.git import GitSeanoDatabase
-from pyseano.utils import SeanoFatalError
+from seano_cli.constants import *
+from seano_cli.db.dumb import DumbSeanoDatabase
+from seano_cli.db.git import GitSeanoDatabase
+from seano_cli.utils import SeanoFatalError
 import logging
 import os
 import sys

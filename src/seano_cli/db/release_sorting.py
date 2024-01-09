@@ -1,5 +1,5 @@
 """
-pyseano/db/release_sorting.py
+seano_cli/db/release_sorting.py
 
 As it turns out, sorting a list of releases is hard.
 To improve readability and testability, the algorithm is isolated to here.
