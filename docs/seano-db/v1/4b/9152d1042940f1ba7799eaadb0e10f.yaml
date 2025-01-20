@@ -1,0 +1,21 @@
+risk: low
+
+employee-short-loc-hlist-md:
+ en-US:
+ - Automatically re-import extern `seano` notes if they become corrupt locally
+
+employee-technical-loc-md:
+  en-US: |
+    Previously, if a local copy of an extern `seano` note was corrupt, all future
+    attempts to import extern notes would fail.  To fix this problem, a
+    developer had to manually delete the local copy of the extern `seano` note,
+    and re-import extern notes (such as by running `waf configure`).
+
+    Going forward, when this problem happens, the note is automatically
+    re-imported from its original source, overwriting the corrupt copy, as part
+    of a normal `seano` note import.  No additional manual intervention is
+    required.
+
+qa-technical-loc-md:
+  en-US: |
+    If the build passes, then we're good to go!

@@ -227,7 +227,7 @@ Ghosting notes now does not impact any notes imported in the future.
                         if not d: continue
                         # Return the first non-empty section:
                         return d
-            meta = load_extern_meta()
+            meta = load_extern_meta() or {}  # On parse error, pretend note is missing and re-import it
 
             # If this is a ghost note, then do not overwrite it:
             if meta.get(SEANO_NOTE_KEY_IS_GHOST, False):
