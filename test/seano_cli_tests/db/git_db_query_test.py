@@ -822,6 +822,252 @@ ref_parsers:
                 ],
             })
 
+    def testMultipleRefsPerCommit(self):
+        r'''
+        In this test, we will manufacture a repository with the commit graph
+        below, and then show that ``seano`` mines the correct releases during a
+        query.
+
+            *  v3.0
+            *  <variable refs here>
+            *  v1.0
+        '''
+        with self.TempDir() as workdir:
+            setup_repo(workdir)
+            putfile(os.path.join(workdir, 'seano-config.yaml'), r'''---
+current_version: "3.0"
+
+# ABK: Deliberately overriding the list of ref parsers, because we don't want
+#      to enable backstories for prereleases like `seano` normally does, to help
+#      keep complexity down in this test.  Instead, simply set a value on the
+#      release to tell which ref parser triggered.
+ref_parsers:
+- description: Release Tag
+  regex: '^refs/tags/v(?P<name>[0-9\.]+)$'
+  release:
+    name: "{name}"
+- description: Release Candidate
+  regex: '^refs/heads/next$'
+  release:
+    name: "next"
+''')
+            shcall(['git', 'add', '-A', '.'], cwd=workdir)
+            shcall(['git', 'commit', '-m', 'wip'], cwd=workdir)
+            shcall(['git', 'tag', 'v1.0'], cwd=workdir)
+            commit_ids = {}
+            commit_ids['1.0'] = shgeto(['git', 'rev-parse', 'HEAD'], cwd=workdir)
+
+            tree = shgeto(['git', 'rev-parse', commit_ids['1.0'] + '^{tree}'], cwd=workdir)
+            commit_ids['variable'] = shgeto([
+                'git', 'commit-tree', tree,
+                '-p', commit_ids['1.0'],
+                '-m', 'variable refs',
+            ], cwd=workdir)
+
+            commit_ids['3.0'] = shgeto([
+                'git', 'commit-tree', tree,
+                '-p', commit_ids['variable'],
+                '-m', '3.0',
+            ], cwd=workdir)
+            shcall(['git', 'reset', '--hard', commit_ids['3.0']], cwd=workdir)
+            shcall(['git', 'tag', 'v3.0'], cwd=workdir)
+
+            # Commit graph has been created.  Run a query and verify the output:
+
+            self.assertQueryOutputEquals(workdir, {
+                'current_version': '3.0',
+                'ref_parsers': [
+                    {
+                        'description': 'Release Tag',
+                        'regex': r'^refs/tags/v(?P<name>[0-9\.]+)$',
+                        'release': {
+                            'name': '{name}',
+                        },
+                    },
+                    {
+                        'description': 'Release Candidate',
+                        'regex': r'^refs/heads/next$',
+                        'release': {
+                            'name': 'next',
+                        },
+                    },
+                ],
+                'releases': [
+                    {
+                        'name': '3.0',
+                        'commit': commit_ids['3.0'],
+                        'before': [],
+                        'after': [{'name': '1.0'}],
+                        'notes': [],
+                    },
+                    {
+                        'name': '1.0',
+                        'commit': commit_ids['1.0'],
+                        'before': [{'name': '3.0'}],
+                        'after': [],
+                        'notes': [],
+                    },
+                ],
+            })
+
+            # Create the `next` branch on the middle commit, and try again:
+
+            shcall(['git', 'branch', 'next', commit_ids['variable']], cwd=workdir)
+
+            self.assertQueryOutputEquals(workdir, {
+                'current_version': '3.0',
+                'ref_parsers': [
+                    {
+                        'description': 'Release Tag',
+                        'regex': r'^refs/tags/v(?P<name>[0-9\.]+)$',
+                        'release': {
+                            'name': '{name}',
+                        },
+                    },
+                    {
+                        'description': 'Release Candidate',
+                        'regex': r'^refs/heads/next$',
+                        'release': {
+                            'name': 'next',
+                        },
+                    },
+                ],
+                'releases': [
+                    {
+                        'name': '3.0',
+                        'commit': commit_ids['3.0'],
+                        'before': [],
+                        'after': [{'name': 'next'}],
+                        'notes': [],
+                    },
+                    {
+                        'name': 'next',
+                        'commit': commit_ids['variable'],
+                        'before': [{'name': '3.0'}],
+                        'after': [{'name': '1.0'}],
+                        'notes': [],
+                    },
+                    {
+                        'name': '1.0',
+                        'commit': commit_ids['1.0'],
+                        'before': [{'name': 'next'}],
+                        'after': [],
+                        'notes': [],
+                    },
+                ],
+            })
+
+            # Create the `v2.0` tag on the middle commit, and try again:
+            #   (expected behavior: presence of tag overrides branch)
+
+            shcall(['git', 'tag', 'v2.0', commit_ids['variable']], cwd=workdir)
+
+            self.assertQueryOutputEquals(workdir, {
+                'current_version': '3.0',
+                'ref_parsers': [
+                    {
+                        'description': 'Release Tag',
+                        'regex': r'^refs/tags/v(?P<name>[0-9\.]+)$',
+                        'release': {
+                            'name': '{name}',
+                        },
+                    },
+                    {
+                        'description': 'Release Candidate',
+                        'regex': r'^refs/heads/next$',
+                        'release': {
+                            'name': 'next',
+                        },
+                    },
+                ],
+                'releases': [
+                    {
+                        'name': '3.0',
+                        'commit': commit_ids['3.0'],
+                        'before': [],
+                        'after': [{'name': '2.0'}],
+                        'notes': [],
+                    },
+                    {
+                        'name': '2.0',
+                        'commit': commit_ids['variable'],
+                        'before': [{'name': '3.0'}],
+                        'after': [{'name': '1.0'}],
+                        'notes': [],
+                    },
+                    {
+                        'name': '1.0',
+                        'commit': commit_ids['1.0'],
+                        'before': [{'name': '2.0'}],
+                        'after': [],
+                        'notes': [],
+                    },
+                ],
+            })
+
+            # Create the `v2.1` tag on the middle commit, and try again:
+            #   (expected behavior: same ref parser found both tags, so both
+            #    tags are declared):
+
+            # ABK: IMHO, this is undesirable behavior.  It would be better if
+            # multiple tags on the same commit were serially associated, in
+            # some sort of reasonable order (such as SemVer-ish), rather than
+            # what you see below.  I'd like to fix it, but time/priorities/etc.
+            # For now, just understand that this behavior is officially on
+            # notice, and I hope it changes in the future.
+
+            shcall(['git', 'tag', 'v2.1', commit_ids['variable']], cwd=workdir)
+
+            self.assertQueryOutputEquals(workdir, {
+                'current_version': '3.0',
+                'ref_parsers': [
+                    {
+                        'description': 'Release Tag',
+                        'regex': r'^refs/tags/v(?P<name>[0-9\.]+)$',
+                        'release': {
+                            'name': '{name}',
+                        },
+                    },
+                    {
+                        'description': 'Release Candidate',
+                        'regex': r'^refs/heads/next$',
+                        'release': {
+                            'name': 'next',
+                        },
+                    },
+                ],
+                'releases': [
+                    {
+                        'name': '3.0',
+                        'commit': commit_ids['3.0'],
+                        'before': [],
+                        'after': [{'name': '2.0'}, {'name': '2.1'}],
+                        'notes': [],
+                    },
+                    {
+                        'name': '2.1',
+                        'commit': commit_ids['variable'],
+                        'before': [{'name': '3.0'}],
+                        'after': [{'name': '1.0'}],
+                        'notes': [],
+                    },
+                    {
+                        'name': '2.0',
+                        'commit': commit_ids['variable'],
+                        'before': [{'name': '3.0'}],
+                        'after': [{'name': '1.0'}],
+                        'notes': [],
+                    },
+                    {
+                        'name': '1.0',
+                        'commit': commit_ids['1.0'],
+                        'before': [{'name': '2.0'}, {'name': '2.1'}],
+                        'after': [],
+                        'notes': [],
+                    },
+                ],
+            })
+
 
 if __name__ == '__main__':
     unittest.main()

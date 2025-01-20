@@ -1,0 +1,95 @@
+---
+risk: low
+
+employee-short-loc-hlist-md:
+  en-US:
+  - When multiple releases are automatically detected on a single commit,
+    discard candidates from lower priority ref parsers
+
+employee-technical-loc-md:
+  en-US: |
+    Background:
+
+    > In a recent release of `seano`, support was added to let projects customize
+    > the ref parsers that are used to auto-detect releases, via a new
+    > `ref_parsers` structure that can be added to the project-local
+    > `seano-config.yaml` file.  Most obviously, this allows projects to adjust
+    > their tagging conventions without requiring a change in `seano` itself.
+    > Example:
+    >
+    > ```yaml
+    > ref_parsers:
+    > - description: "SemVer Release Tag for Acme Piano Dropper"
+    >   regex: '^refs/tags/apd-(?P<name>0|[1-9]\d*(\.(0|[1-9]\d*)){2})$'
+    >   release:
+    >     name: '{name}'
+    > ```
+    >
+    > More cleverly, in projects where one or more branches are used to indicate
+    > the state of certain parts of the release process, custom ref parsers can
+    > be used to automatically define fake (transient) releases that provide
+    > visibility into those states within `seano` views, without forcing the
+    > reader to leave to look at a different tool.  Example:
+    >
+    > ```yaml
+    > ref_parsers:
+    > - description: SemVer Release Tag
+    >   regex: '^refs/tags/v(?P<name>0|[1-9]\d*(\.(0|[1-9]\d*)){2})$'
+    >   release:
+    >     name: '{name}'
+    > - description: Current Release Candidate
+    >   regex: '^refs/remotes/origin/next$'
+    >   release:
+    >     name: Current Release Candidate
+    >     auto-wrap-in-backstory: true # Never display to customers
+    > ```
+    >
+    > Previously, all ref parsers were always used on every available ref for
+    > every commit.  This was usually fine, because every time a single commit
+    > had multiple cardinal refs *(i.e., multiple refs matched by ref parsers)*,
+    > it was a mistake.  Well, not anymore: in the aforementioned example, a
+    > release tag was on the same commit as `next`.  And, this was not a mistake
+    > — so, ideally, `seano` should do something at least halfway sane.
+    >
+    > By default, when multiple releases are auto-detected on the same commit,
+    > `seano` treats them as unrelated children of their parent releases, and as
+    > unrelated parents of each of their child releases.  This behavior was
+    > chosen because it was trivially easy to implement at the time, and it was
+    > believed that there was no good reason for a single commit to have
+    > multiple cardinal refs, so the exact behavior was believed to not matter.
+    >
+    > Disclaimer: I'm not sure that it's correct to say that there's no good
+    > reason for multiple cardinal refs to exist on the same commit.  However,
+    > since a relatively small bug fix is possible (see below), I'm not inclined
+    > to challenge the assumption just yet.
+
+    In an effort to make a useful, incremental step forward, ref parsers are now
+    executed in series on all of the refs for a given commit, and if any ref
+    parser yields any releases, parsing is stopped on that set of refs.  This
+    behavior helps keep us anchored in a world where there is no good reason for
+    a single commit to have multiple cardinal refs, by (usually) preventing the
+    creation of multiple releases when multiple cardinal refs exist on the same
+    commit.
+
+    More concretely, in the aforementioned problem example, since the ref parser
+    for release tags has a higher priority than the ref parser for the `next`
+    branch *(i.e., it is higher up in the list)*, the auto-detection of a
+    release via a release tag now suppresses the auto-detection of a release
+    from the `next` branch when they are on the same commit.
+
+    This change does not address a larger, *mostly unrelated* problem, where if
+    a commit has multiple cardinal refs that are all matched by *the same ref
+    parser*, `seano` won't be able to choose which one(s) to discard, so they
+    will all be accepted, resulting in multiple releases being automatically
+    detected on the same commit.  So far, every time this has happened, it was a
+    mistake, and the correct solution has been to delete one of the two
+    releases, either via deleting the ref, or adding a deletion instruction in
+    the project's `seano-config.yaml` file.
+
+    This change is classified as low risk due to the presence of unit tests, and
+    the lack of usage of `seano` in production.
+
+qa-technical-loc-md:
+  en-US: |
+    This change has 100% unit test coverage, so there is nothing to manually
+    test.

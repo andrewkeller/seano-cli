@@ -227,7 +227,6 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                         raise SeanoFatalError('Unable to parse `ref_parsers`: for rule at index %d: missing field: `regex`' % (idx,))
 
                     release = cfg.get('release')
-
                     if release is not None:
                         if not isinstance(release, dict) or 'name' not in release:
                             raise SeanoFatalError('Unable to parse `ref_parsers`: for rule at index %d: missing field: `name`' % (idx,))
@@ -250,18 +249,51 @@ class GitSeanoDatabase(GenericSeanoDatabase):
         return self._cached_deleted_release_names
 
 
-    def parse_ref(self, ref):
+    def parse_refs(self, refs):
         '''
-        Scans the given ref for the possibility that it indicates a release.
+        Scans the given list of refs for the possibility that one or more of
+        them indicate the presence of one or more releases.
 
-        If we think this ref indicates a release, we return the release name.  Else, we return None.
+        Returns a list of zero or more release objects.
         '''
-        for parser in self.get_ref_parsers():
-            m = parser.match(ref)
-            if m:
-                if m['name'] not in self.get_deleted_release_names():
-                    return m
-        return None
+        # Short-circuit if the list of refs is empty:
+        if not refs: return []
+
+        releases = [] # List of releases (will eventually be returned)
+        drnames = self.get_deleted_release_names()
+        ref_parsers_iter = iter(self.get_ref_parsers())
+
+        def consume(ref, parser):
+            '''
+            Attempts to consume the given ref using the given ref parser.
+
+            On success, the newly generated release is added to the `releases`
+            list, and this function returns `None`.
+
+            On failure, this function returns the given ref.
+
+            [1] If the name of the newly generated release is in the list of
+            deleted releases, then the release is ignored, but the ref is still
+            consumed as if parsing worked.
+            '''
+            candidate = parser.match(ref)
+            if not candidate: return ref
+            if candidate['name'] in drnames: return None  # [1]
+            releases.append(candidate)
+            return None
+
+        while refs:  # While there are still refs to consume
+            if releases: break
+            try: parser = next(ref_parsers_iter)
+            except StopIteration: break
+
+            # Try to consume each ref using the current ref parser:
+            refs = list(filter(None, map(lambda r: consume(r, parser), refs)))
+
+        if len(releases) != len(set([r['name'] for r in releases])):
+            raise SeanoFatalError('Git ref parsers yielded duplicate release names: given refs %s, they reported releases %s' % (refs, releases))
+
+        return sorted(releases, key=lambda d: semverish_sort_key(d.get('comparable-name') or d['name']))
 
 
     def scan_git_seano_db(self, include_modified):
@@ -457,8 +489,7 @@ class GitSeanoDatabase(GenericSeanoDatabase):
                 parents = [x for x in parents if x]
                 refs = [x for x in refs if x]
 
-                releases = sorted(list(filter(None, map(self.parse_ref, refs))),
-                                  key=lambda d: semverish_sort_key(d.get('comparable-name') or d['name']))
+                releases = self.parse_refs(refs)
 
                 yield Commit(
                     commit_id = commit_id,
