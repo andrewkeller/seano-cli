@@ -30,29 +30,54 @@ jobs:
   test:
     strategy:
       matrix:
-        python-version:
-        - '3.12'
-        - '3.11'
-        - '3.10'
-        - '3.9'
-        - '3.8'
-        - '3.7'
-        platform:
-        - name: Ubuntu
+        system:
+        - python: '3.12'
+          platform: Linux
           runs-on: ubuntu-latest
-        - name: Windows
+        - python: '3.12'
+          platform: Windows
+          runs-on: windows-latest
+        - python: '3.11'
+          platform: Linux
+          runs-on: ubuntu-latest
+        - python: '3.11'
+          platform: Windows
+          runs-on: windows-latest
+        - python: '3.10'
+          platform: Linux
+          runs-on: ubuntu-latest
+        - python: '3.10'
+          platform: Windows
+          runs-on: windows-latest
+        - python: '3.9'
+          platform: Linux
+          runs-on: ubuntu-latest
+        - python: '3.9'
+          platform: Windows
+          runs-on: windows-latest
+        - python: '3.8'
+          platform: Linux
+          runs-on: ubuntu-latest
+        - python: '3.8'
+          platform: Windows
+          runs-on: windows-latest
+        - python: '3.7'
+          platform: Linux
+          runs-on: ubuntu-22.04 # keep limping along so long as GH offers this older image
+        - python: '3.7'
+          platform: Windows
           runs-on: windows-latest
 
-    name: Test Py ${{ matrix.python-version }} on ${{ matrix.platform.name }}
-    runs-on: ${{ matrix.platform.runs-on }}
+    name: Test Py ${{ matrix.system.python }} on ${{ matrix.system.platform }}
+    runs-on: ${{ matrix.system.runs-on }}
     needs: package
     timeout-minutes: 3
 
     steps:
-    - name: Install Python ${{ matrix.python-version }}
+    - name: Install Python ${{ matrix.system.python }}
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: ${{ matrix.system.python }}
 
     - name: Checkout Repo
       uses: actions/checkout@v4
