@@ -1,0 +1,33 @@
+---
+risk: medium
+
+tickets:
+- https://github.com/andrewkeller/seano-cli/issues/1
+
+customer-short-loc-hlist-md:
+  en-US:
+  - Fixes:
+    - Improved note rename detection
+
+employee-short-loc-hlist-md:
+  en-US:
+  - Fixed note rename detection
+
+employee-technical-loc-md:
+  en-US: |
+    Seano uses Git history to identify when a note was first added.  This can
+    involve following renames in some cases.  A bug was found where rename
+    detection did not work at all on Windows, due to mismanagement of
+    platform-specific directory separators.
+
+    The bug has been fixed.
+
+    The fix resulted in a unit test failure.  Curiously, the test failure
+    **_matched_** some `TODO`'s in the failing test.  Even more curiously, when
+    updating the test to work like the `TODO`'s said it should, the test started
+    passing.  Most likely, past me knew there was a bug, but couldn't find it,
+    so left some `TODO`'s behind in the tests.
+
+    Consequently, although the original purpose of this change was to fix note
+    rename detection on Windows due to a mismanagement of backslashes, this
+    change inadvertently improved note rename detection on all platforms.

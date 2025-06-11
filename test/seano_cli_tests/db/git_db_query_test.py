@@ -506,10 +506,9 @@ parent_versions:
                         'after': [{'name': '1.2.3'}],
                         'notes': [
                             {
-                                # TODO: This note was ONLY released in 1.2.4d1.
                                 'id': 'abc-moved',
-                                'commits': sorted([commit_122, commit_head]),
-                                'releases': ['1.2.2', '1.2.4d1'],
+                                'commits': [commit_head],
+                                'releases': ['1.2.4d1'],
                                 'bird': 'dog',
                             },
                         ],
@@ -535,12 +534,10 @@ parent_versions:
                         'after': [{'name': '1.2.1'}],
                         'notes': [
                             {
-                                # TODO: This note was ONLY released in 1.2.4d1.
-                                # TODO: We're missing the 'foo: bar' note in this release.
-                                'id': 'abc-moved',
-                                'commits': sorted([commit_122, commit_head]),
-                                'releases': ['1.2.2', '1.2.4d1'],
-                                'bird': 'dog',
+                                'id': 'ghi',
+                                'commits': [commit_122],
+                                'releases': ['1.2.2'],
+                                'foo': 'bar',
                             },
                         ],
                     },
