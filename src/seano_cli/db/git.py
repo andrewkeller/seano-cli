@@ -643,7 +643,7 @@ class GitSeanoDatabase(GenericSeanoDatabase):
             # need to take care to convert all paths to native directory separators on-the-fly.
             # The confusion that git-log introduced earlier should not leak to anything outside of
             # this function.
-            dirsep_patch_func = None
+            dirsep_patch_func = lambda x: x
             if sys.platform in ['win32']:
                 dirsep_patch_func = lambda s: os.path.join(*s.split('/'))
 
@@ -652,34 +652,29 @@ class GitSeanoDatabase(GenericSeanoDatabase):
             for change in commit.raw_name_statuses:
                 change = change.split('\t')
                 code = change[0]
-                if code == 'A' or code == 'C' or (include_modified and code == 'M'):
+                if code == 'A' or (include_modified and code == 'M'):
                     fname = change[1]
                     if fname in notes or primary_note_regex.match(fname):
-                        # Report this note!
-                        if dirsep_patch_func:
-                            fname = dirsep_patch_func(fname)
-                        n = notes.get(fname, dict(path=fname))
+                        # Found the creation point of a note; report it:
+                        n = notes.get(fname) or dict(path=dirsep_patch_func(fname))
+                        notes[fname] = n
                         notes_to_report.append(n)
                     continue
                 if code == 'R100':
                     fsrc = change[1]
                     fdst = change[2]
                     if fdst in notes or primary_note_regex.match(fdst):
-                        # Alias the note to both filenames
-                        if dirsep_patch_func:
-                            fsrc = dirsep_patch_func(fsrc)
-                            fdst = dirsep_patch_func(fdst)
-                        n = notes.get(fdst, notes.get(fsrc, dict(path=fdst)))
+                        # Found a rename point of a note; track its rename:
+                        n = notes.get(fdst) or dict(path=dirsep_patch_func(fdst))
                         notes[fsrc] = n
                         notes[fdst] = n
+                        # (This note will be reported when we find its creation point)
                     continue
                 if code == 'D':
                     fname = change[1]
                     if fname in notes or primary_note_regex.match(fname):
                         # Mark the note as "never report"
-                        if dirsep_patch_func:
-                            fname = dirsep_patch_func(fname)
-                        n = notes.get(fname, dict(path=fname))
+                        n = notes.get(fname) or dict(path=dirsep_patch_func(fname))
                         n['delete'] = True
                         notes[fname] = n
                     continue
