@@ -4,15 +4,14 @@
 #   - in particular, the behavior related to importing notes from an extern database
 from seano_cli.db.generic import GenericSeanoDatabase
 from seano_cli.utils import write_existing_file
+from seano_cli_tests.util import rmrf
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 
 mkdir = os.mkdir
-rmrf = shutil.rmtree
 
 def ensure_native_newlines(txt):
     return os.linesep.join(txt.splitlines()) + os.linesep

@@ -4,12 +4,10 @@
 #   - in particular, the behavior related to loading a database
 from seano_cli.db.generic import GenericSeanoDatabase
 from seano_cli.utils import SeanoFatalError
+from seano_cli_tests.util import rmrf
 import os
-import shutil
 import tempfile
 import unittest
-
-rmrf = shutil.rmtree
 
 
 class GenericDbLoadTest(unittest.TestCase):

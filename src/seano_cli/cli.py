@@ -8,7 +8,7 @@ Interrogates and manipulates a CE Release Notes (seano) database.
 """
 
 from seano_cli.cmd import *
-from seano_cli.utils import SeanoFatalError
+from seano_cli.utils import edit_files, SeanoFatalError
 import argparse
 import logging
 import os
@@ -47,10 +47,14 @@ def main():
     subparser.set_defaults(func=make_new_release_notes)
     add_db_args(subparser)
     subparser.add_argument('-n', action='store', dest='count', default=1, help='Number of new notes to create')
+    subparser.add_argument('--print-paths', action='store_true', default=False,
+                           help='Print the paths of the new note files to stdout instead of opening an editor')
 
     subparser = subparsers.add_parser('edit', help='Identifies and edits the latest created relase note')
     subparser.set_defaults(func=edit_latest_release_note)
     add_db_args(subparser)
+    subparser.add_argument('--print-paths', action='store_true', default=False,
+                           help='Print the paths of the selected note files to stdout instead of opening an editor')
     subparser.add_argument('--include-wip', '-w', action='store_true', default=False,
                            help='When no patterns are provided, the default behavior is to search for notes that ' +
                                 'have not been committed in the repository yet.  When one or more patterns are ' +
@@ -200,6 +204,12 @@ def main():
     except KeyError:
         parser.print_help()
         sys.exit(1)
+
+    if 'print_paths' in kwargs:
+        def _print_paths(paths):
+            for p in paths:
+                print(p)
+        kwargs['open_files'] = _print_paths if kwargs.pop('print_paths') else edit_files
 
     try:
         ns.func(**kwargs)

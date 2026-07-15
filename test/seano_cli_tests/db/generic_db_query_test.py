@@ -3,13 +3,12 @@
 # Automated unit tests for the GenericSeanoDatabase class
 #   - in particular, the behavior related to querying a database
 from seano_cli.db.generic import GenericSeanoDatabase
+from seano_cli_tests.util import rmrf
 import os
-import shutil
 import tempfile
 import unittest
 
 mkdir = os.mkdir
-rmrf = shutil.rmtree
 
 
 class GenericDbQueryTest(unittest.TestCase):

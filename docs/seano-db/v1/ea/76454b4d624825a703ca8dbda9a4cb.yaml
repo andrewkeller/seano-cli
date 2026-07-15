@@ -1,0 +1,38 @@
+---
+risk: low
+
+employee-short-loc-hlist-md:
+  en-US:
+  - Add `--print-paths` flag to `seano new` and `seano edit`
+
+employee-technical-loc-md:
+  en-US: |
+    Both `seano new` and `seano edit` previously opened an editor (controlled by
+    `SEANO_EDITOR`, `EDITOR`, or defaulting to `vim -O`) unconditionally.  This
+    made automated and AI-assisted workflows awkward for two reasons:
+
+    1. There is no single `EDITOR` value that works in both `cmd.exe` and WSL on
+       Windows, so cross-platform projects had no reliable escape hatch that
+       they could hard-code into documentation or other instructions.
+    2. Tools like Claude prefer to read file paths from stdout rather than
+       wrangle an interactive editor process.
+
+    Both subcommands now accept `--print-paths`.  When present, Seano completely
+    ignores any configured editors, prints each selected file path to `stdout`
+    (one per line) and exits.  This is semantically similar to `EDITOR=true` (a
+    no-op editor) but is more ergonomic, discoverable, and cross-platform.
+
+    Example usage:
+
+    ```sh
+    # Create a note and get its path without opening an editor:
+    seano new --print-paths
+
+    # Find the most-recently-added note path:
+    seano edit --print-paths
+    ```
+
+    The flag is intentionally per-subcommand.  In the event that a future
+    subcommands must consume editor output, the subcommand can simply omit the
+    declaration of the `--print-paths` parameter, signalling that a no-op editor
+    is not allowed.

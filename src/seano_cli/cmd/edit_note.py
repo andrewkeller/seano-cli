@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 # IMPROVE: This shares a lot with `list_latest_release_notes()`; should they be unified?
-def edit_latest_release_note(db_search_seed_path, include_wip, include_modified, patterns):
+def edit_latest_release_note(db_search_seed_path, include_wip, include_modified, patterns, open_files):
     db = find_and_open_seano_database(db_search_seed_path)
     files = []
     # IMPROVE: In a Git-backed project, `most_recently_added_notes()` and `get_notes_matching_pattern()` are both
@@ -33,4 +33,4 @@ def edit_latest_release_note(db_search_seed_path, include_wip, include_modified,
         raise SeanoFatalError("Release notes database is empty")
     files = sorted(set(files))
     log.debug("About to edit:\n    %s", "\n    ".join(files))
-    edit_files(files)
+    open_files(files)
