@@ -31,6 +31,18 @@ jobs:
     strategy:
       matrix:
         system:
+        - python: '3.14'
+          platform: Linux
+          runs-on: ubuntu-latest
+        - python: '3.14'
+          platform: Windows
+          runs-on: windows-latest
+        - python: '3.13'
+          platform: Linux
+          runs-on: ubuntu-latest
+        - python: '3.13'
+          platform: Windows
+          runs-on: windows-latest
         - python: '3.12'
           platform: Linux
           runs-on: ubuntu-latest
