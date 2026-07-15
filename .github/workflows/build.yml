@@ -10,7 +10,7 @@ jobs:
     steps:
 
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Package
       run: |
@@ -21,7 +21,7 @@ jobs:
         python -m build
 
     - name: Publish Package
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: dist
         path: dist
@@ -75,15 +75,15 @@ jobs:
 
     steps:
     - name: Install Python ${{ matrix.system.python }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.system.python }}
 
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Download Packaged Distribution
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: dist
 
